@@ -32,6 +32,37 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env.local
+
+# logs
+logs
+*.log
+
+# editors / IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# OS generated
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# package managers cache
+/.npm
+/.cache
+
+# Generated PDF/CSV exports (adjust if you want to commit artifacts)
+*.csv
+*.pdf
+
+# Build artifacts for design tools
+*.sketch
+*.fig
+*.xd
 
 # vercel
 .vercel

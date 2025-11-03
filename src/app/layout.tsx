@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from '@/context/AuthContext';
+import Link from 'next/link';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,10 +26,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-[--background] text-[--foreground] antialiased min-h-screen`}>        
+        <AuthProvider>
+          <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-3 backdrop-blur bg-[--color-surface]/90 border-b border-[--color-border] shadow-sm">
+            <Link href="/dashboard" className="text-lg font-semibold tracking-tight bg-clip-text text-transparent gradient-accent">Final Theme Reports</Link>
+            <nav className="flex gap-6 text-sm text-[--neutral-700]">
+              <Link href="/employees" className="transition-colors hover:text-[--color-primary]">Employees</Link>
+              <Link href="/reports" className="transition-colors hover:text-[--color-primary]">Reports</Link>
+            </nav>
+          </header>
+          <main className="mx-auto max-w-6xl px-6 py-6 space-y-6">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );

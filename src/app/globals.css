@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand & primary scale */
+  --color-primary: #1D5B79; /* Primary 500 */
+  --color-primary-50: #F0F7FA;
+  --color-primary-100: #D9ECF3;
+  --color-primary-600: #16455C; /* Hover */
+  --color-primary-700: #0F3141;
+
+  /* Accent & interactive */
+  --color-accent: #FF8E3C; /* Accent / highlight */
+  --color-accent-600: #E57525;
+  --color-accent-contrast: #2D1E10;
+
+  /* Semantic */
+  --color-success: #2BAA74;
+  --color-success-600: #1E7A52;
+  --color-warning: #E4B800;
+  --color-warning-600: #B89200;
+  --color-danger: #E5484D;
+  --color-danger-600: #C12F35;
+
+  /* Neutrals */
+  --neutral-50: #F9FAFB;
+  --neutral-100: #F1F3F5;
+  --neutral-200: #E3E7EB;
+  --neutral-300: #CDD3D9;
+  --neutral-400: #B5BEC6;
+  --neutral-500: #9AA6B1;
+  --neutral-600: #7B8894;
+  --neutral-700: #5D6974;
+  --neutral-800: #3E4851;
+  --neutral-900: #232A30;
+
+  --background: var(--neutral-100);
+  --foreground: var(--neutral-900);
+  --color-border: var(--neutral-300);
+  --color-border-strong: var(--neutral-400);
+  --color-surface: #FFFFFF;
+  --color-surface-alt: var(--neutral-50);
+  --color-muted: var(--neutral-600);
+
+  /* Effects */
+  --gradient-accent: linear-gradient(135deg,var(--color-primary) 0%,var(--color-primary-700) 100%);
+  --focus-ring: 0 0 0 3px rgba(29,91,121,0.35);
+  --shadow-sm: 0 1px 1px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 18px rgba(0,0,0,0.14);
+
+  --font-dava-sans: 'Dava Sans', Arial, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #12181C;
+    --foreground: #F5F7F9;
+    --color-surface: #1E252B;
+    --color-surface-alt: #181E23;
+    --color-border: #2A343B;
+    --color-border-strong: #3A4750;
+    --color-muted: var(--neutral-500);
+    --shadow-sm: 0 1px 1px rgba(0,0,0,0.5);
+    --shadow-md: 0 2px 4px rgba(0,0,0,0.55);
+    --shadow-lg: 0 4px 18px rgba(0,0,0,0.6);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dava-sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Utility classes mapping theme */
+.text-primary { color: var(--color-primary); }
+.text-muted { color: var(--color-muted); }
+.text-danger { color: var(--color-danger); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.bg-primary { background-color: var(--color-primary); }
+.bg-primary-hover { background-color: var(--color-primary-600); }
+.bg-accent { background-color: var(--color-accent); }
+.bg-surface { background-color: var(--color-surface); }
+.bg-surface-alt { background-color: var(--color-surface-alt); }
+.border-theme { border-color: var(--color-border); }
+.border-theme-strong { border-color: var(--color-border-strong); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.focus-ring:focus { outline: none; box-shadow: var(--focus-ring); }
+.gradient-accent { background: var(--gradient-accent); }
