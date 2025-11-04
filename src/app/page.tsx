@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Spinner } from '@/components/ui/Spinner';
+import { Spinner } from '@/components/shadcn/spinner';
 
 export default function Home() {
   const { accessToken, loading } = useAuth();

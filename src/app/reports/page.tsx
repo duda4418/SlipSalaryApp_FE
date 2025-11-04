@@ -1,11 +1,12 @@
 "use client";
 import React from 'react';
-import { Protected } from '@/components/ui/Protected';
+import { Protected } from '@/components/shadcn/protected';
 import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/shadcn/button';
+import { Input } from '@/components/shadcn/input';
+import { Label } from '@/components/shadcn/label';
 import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees } from '@/lib/apiClient';
-import { Spinner } from '@/components/ui/Spinner';
+import { Spinner } from '@/components/shadcn/spinner';
 import Link from 'next/link';
 
 export default function ReportsPage() {
@@ -41,14 +42,20 @@ export default function ReportsPage() {
         <div className="space-y-4 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm">
           <h2 className="text-lg font-medium text-[--neutral-800]">Parameters</h2>
           <div className="flex gap-4">
-            <Input type="number" label="Year" value={year} onChange={e => setYear(Number(e.target.value))} />
-            <Input type="number" label="Month" value={month} onChange={e => setMonth(Number(e.target.value))} />
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="year">Year</Label>
+              <Input id="year" type="number" value={year} onChange={e => setYear(Number(e.target.value))} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="month">Month</Label>
+              <Input id="month" type="number" value={month} onChange={e => setMonth(Number(e.target.value))} />
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button disabled={!managerId || loading} onClick={() => wrap(() => createAggregatedEmployeeData(managerId, year, month, true), 'Create CSV')}>Create CSV</Button>
             <Button variant="secondary" disabled={!managerId || loading} onClick={() => wrap(() => sendAggregatedEmployeeData(managerId, year, month), 'Send CSV')}>Send CSV</Button>
             <Button variant="outline" disabled={!managerId || loading} onClick={() => wrap(() => createPdfForEmployees(managerId, year, month, false), 'Create PDFs')}>Create PDFs</Button>
-            <Button variant="danger" disabled={!managerId || loading} onClick={() => wrap(() => sendPdfToEmployees(managerId, year, month, false), 'Send PDFs')}>Send PDFs</Button>
+            <Button variant="destructive" disabled={!managerId || loading} onClick={() => wrap(() => sendPdfToEmployees(managerId, year, month, false), 'Send PDFs')}>Send PDFs</Button>
           </div>
           {loading && <Spinner />}
         </div>

@@ -1,8 +1,8 @@
 "use client";
 import React from 'react';
-import { Protected } from '@/components/ui/Protected';
+import { Protected } from '@/components/shadcn/protected';
 import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/shadcn/button';
 import Link from 'next/link';
 
 export default function DashboardPage() {
