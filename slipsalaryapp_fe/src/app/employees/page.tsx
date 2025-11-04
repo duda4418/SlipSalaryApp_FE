@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { Protected } from '@/components/ui/Protected';
 import { listEmployees } from '@/lib/apiClient';
 import { Employee } from '@/types';
 import { Spinner } from '@/components/ui/Spinner';
@@ -18,9 +19,10 @@ export default function EmployeesPage() {
   if (!employees) return <div className="p-6"><Spinner /></div>;
 
   return (
+    <Protected fallback={<div className="p-6 text-center text-[--color-muted]">Please sign in to view employees.</div>}>
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-[--color-primary]">Employees</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-[--neutral-800]">Employees</h1>
         <Link href="/dashboard" className="text-sm text-[--color-primary] hover:underline">Back</Link>
       </div>
       <Table>
@@ -44,5 +46,6 @@ export default function EmployeesPage() {
         </TBody>
       </Table>
     </div>
+    </Protected>
   );
 }

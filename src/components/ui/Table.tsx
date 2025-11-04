@@ -7,13 +7,13 @@ export const Table: React.FC<React.TableHTMLAttributes<HTMLTableElement>> = ({ c
 );
 
 export const THead: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = ({ children, ...rest }) => (
-  <thead {...rest} className="bg-[--neutral-100] text-[--color-primary]">{children}</thead>
+  <thead {...rest} className="bg-[--neutral-100] text-[--neutral-700]">{children}</thead>
 );
 export const TBody: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = ({ children, ...rest }) => (
   <tbody {...rest}>{children}</tbody>
 );
 export const TR: React.FC<React.HTMLAttributes<HTMLTableRowElement>> = ({ children, className, ...rest }) => (
-  <tr className={"border-b border-[--color-border] last:border-b-0 " + (className || '')} {...rest}>{children}</tr>
+  <tr className={"border-b border-[--color-border] last:border-b-0 hover:bg-[--neutral-50] transition-colors " + (className || '')} {...rest}>{children}</tr>
 );
 export const TH: React.FC<React.ThHTMLAttributes<HTMLTableCellElement>> = ({ children, className, ...rest }) => (
   <th className={"px-3 py-2 text-left font-medium " + (className || '')} {...rest}>{children}</th>

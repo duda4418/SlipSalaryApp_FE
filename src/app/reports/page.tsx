@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { Protected } from '@/components/ui/Protected';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -30,14 +31,15 @@ export default function ReportsPage() {
   };
 
   return (
+    <Protected fallback={<div className="p-6 text-center text-[--color-muted]">Please sign in to access reports.</div>}>
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-[--color-primary]">Reports</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-[--neutral-800]">Reports</h1>
         <Link href="/dashboard" className="text-sm text-[--color-primary] hover:underline">Back</Link>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-4 rounded-lg border border-[--color-border] bg-[--color-surface] p-4">
-          <h2 className="text-lg font-medium text-[--color-primary]">Parameters</h2>
+        <div className="space-y-4 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm">
+          <h2 className="text-lg font-medium text-[--neutral-800]">Parameters</h2>
           <div className="flex gap-4">
             <Input type="number" label="Year" value={year} onChange={e => setYear(Number(e.target.value))} />
             <Input type="number" label="Month" value={month} onChange={e => setMonth(Number(e.target.value))} />
@@ -50,13 +52,14 @@ export default function ReportsPage() {
           </div>
           {loading && <Spinner />}
         </div>
-        <div className="space-y-2 rounded-lg border border-[--color-border] bg-[--color-surface] p-4">
-          <h2 className="text-lg font-medium text-[--color-primary]">Activity Log</h2>
+        <div className="space-y-2 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm">
+          <h2 className="text-lg font-medium text-[--neutral-800]">Activity Log</h2>
           <ul className="space-y-1 text-xs max-h-80 overflow-auto">
-            {log.map((l, i) => <li key={i} className="rounded bg-[--neutral-100] p-2 text-[--neutral-800]">{l}</li>)}
+            {log.map((l, i) => <li key={i} className="rounded bg-[--neutral-100] p-2 text-[--neutral-700]">{l}</li>)}
           </ul>
         </div>
       </div>
     </div>
+    </Protected>
   );
 }

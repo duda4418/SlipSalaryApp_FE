@@ -1,52 +1,59 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand & primary scale */
-  --color-primary: #1D5B79; /* Primary 500 */
-  --color-primary-50: #F0F7FA;
-  --color-primary-100: #D9ECF3;
-  --color-primary-600: #16455C; /* Hover */
-  --color-primary-700: #0F3141;
-
-  /* Accent & interactive */
-  --color-accent: #FF8E3C; /* Accent / highlight */
-  --color-accent-600: #E57525;
-  --color-accent-contrast: #2D1E10;
+  /* Primary & Accent (accessible contrast) */
+  --color-primary: #2563eb; /* Blue 600 */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-600: #1d4ed8; /* Hover */
+  --color-primary-700: #1e40af;
+  --color-accent: #6366f1; /* Indigo 500 */
+  --color-accent-600: #4f46e5;
+  --color-accent-contrast: #ffffff;
 
   /* Semantic */
-  --color-success: #2BAA74;
-  --color-success-600: #1E7A52;
-  --color-warning: #E4B800;
-  --color-warning-600: #B89200;
-  --color-danger: #E5484D;
-  --color-danger-600: #C12F35;
+  --color-success: #10b981; /* Emerald 500 */
+  --color-success-600: #059669;
+  --color-warning: #f59e0b; /* Amber 500 */
+  --color-warning-600: #d97706;
+  --color-danger: #dc2626; /* Red 600 */
+  --color-danger-600: #b91c1c;
 
-  /* Neutrals */
-  --neutral-50: #F9FAFB;
-  --neutral-100: #F1F3F5;
-  --neutral-200: #E3E7EB;
-  --neutral-300: #CDD3D9;
-  --neutral-400: #B5BEC6;
-  --neutral-500: #9AA6B1;
-  --neutral-600: #7B8894;
-  --neutral-700: #5D6974;
-  --neutral-800: #3E4851;
-  --neutral-900: #232A30;
+  /* Neutrals (Slate) */
+  --neutral-50: #f8fafc;
+  --neutral-100: #f1f5f9;
+  --neutral-200: #e2e8f0;
+  --neutral-300: #cbd5e1;
+  --neutral-400: #94a3b8;
+  --neutral-500: #64748b;
+  --neutral-600: #475569;
+  --neutral-700: #334155;
+  --neutral-800: #1e293b;
+  --neutral-900: #0f172a;
 
-  --background: var(--neutral-100);
+  --background: var(--neutral-50);
   --foreground: var(--neutral-900);
-  --color-border: var(--neutral-300);
-  --color-border-strong: var(--neutral-400);
-  --color-surface: #FFFFFF;
-  --color-surface-alt: var(--neutral-50);
+  --color-border: var(--neutral-200);
+  --color-border-strong: var(--neutral-300);
+  --color-surface: #ffffff;
+  --color-surface-alt: var(--neutral-100);
   --color-muted: var(--neutral-600);
 
+  /* Shape & spacing tokens */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --gap-xs: 4px;
+  --gap-sm: 8px;
+  --gap-md: 16px;
+  --gap-lg: 24px;
+
   /* Effects */
-  --gradient-accent: linear-gradient(135deg,var(--color-primary) 0%,var(--color-primary-700) 100%);
-  --focus-ring: 0 0 0 3px rgba(29,91,121,0.35);
-  --shadow-sm: 0 1px 1px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
-  --shadow-md: 0 2px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06);
-  --shadow-lg: 0 4px 18px rgba(0,0,0,0.14);
+  --gradient-accent: linear-gradient(135deg,var(--color-primary) 0%,var(--color-accent) 100%);
+  --focus-ring: 0 0 0 3px rgba(99,102,241,0.45);
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.06), 0 0 0 1px rgba(15,23,42,0.04);
+  --shadow-md: 0 2px 6px rgba(15,23,42,0.08), 0 0 0 1px rgba(15,23,42,0.06);
+  --shadow-lg: 0 8px 28px rgba(15,23,42,0.12);
 
   --font-dava-sans: 'Dava Sans', Arial, sans-serif;
 }
@@ -54,16 +61,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #12181C;
-    --foreground: #F5F7F9;
-    --color-surface: #1E252B;
-    --color-surface-alt: #181E23;
-    --color-border: #2A343B;
-    --color-border-strong: #3A4750;
-    --color-muted: var(--neutral-500);
-    --shadow-sm: 0 1px 1px rgba(0,0,0,0.5);
-    --shadow-md: 0 2px 4px rgba(0,0,0,0.55);
-    --shadow-lg: 0 4px 18px rgba(0,0,0,0.6);
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --color-surface: #1e293b;
+    --color-surface-alt: #334155;
+    --color-border: #334155;
+    --color-border-strong: #475569;
+    --color-muted: #94a3b8;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-md: 0 2px 6px rgba(0,0,0,0.5);
+    --shadow-lg: 0 8px 28px rgba(0,0,0,0.55);
   }
 }
 
@@ -77,6 +84,7 @@ body {
 
 /* Utility classes mapping theme */
 .text-primary { color: var(--color-primary); }
+.text-accent { color: var(--color-accent); }
 .text-muted { color: var(--color-muted); }
 .text-danger { color: var(--color-danger); }
 .text-success { color: var(--color-success); }

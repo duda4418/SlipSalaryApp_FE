@@ -13,7 +13,7 @@ export const Input: React.FC<InputProps> = ({ label, error, className, ...rest }
   {label && <span className="font-medium text-[--color-primary]">{label}</span>}
       <input
         className={clsx(
-          'rounded-md border border-[--color-border] bg-[--color-surface] px-3 py-2 shadow-sm placeholder:text-[--neutral-600] focus:border-[--color-primary] focus:outline-none focus-ring',
+          'rounded-[--radius-sm] border border-[--color-border] bg-[--color-surface] px-3 py-2 shadow-sm placeholder:text-[--neutral-600] focus:border-[--color-accent] focus:outline-none focus-ring',
           error && 'border-[--color-danger] focus:border-[--color-danger] focus:ring-transparent',
           className
         )}

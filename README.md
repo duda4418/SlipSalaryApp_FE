@@ -48,11 +48,12 @@ Implements the UI for employee management and manager-triggered salary report ge
 ```
 src/
 	app/                Next.js App Router pages
-		login/            Authentication form
-		dashboard/        Entry point after login
-		employees/        List employees
-		reports/          Manager report actions
-	components/ui/      Reusable Tailwind components
+		auth/             Authentication form (email/password)
+		login/            Legacy redirect -> /auth
+		dashboard/        Entry point after login (protected)
+		employees/        List employees (protected)
+		reports/          Manager report actions (protected + manager-only logic in UI)
+	components/ui/      Reusable Tailwind components (Button, Card, Spinner, Protected wrappers)
 	context/            React context providers (Auth)
 	hooks/              Custom hooks (auth guard)
 	lib/                API client fetch + refresh logic
@@ -71,14 +72,16 @@ All frontend data requests must explicitly include the `/api` prefix (e.g. `GET 
 
 ## Auth Flow
 
-1. POST /api/auth/login returns access + refresh tokens.
-2. Tokens stored in localStorage; access decoded for role (`is_manager`).
-3. Auto refresh every ~14 minutes or on 401 (single retry).
-4. Logout clears tokens.
+1. User navigates to `/auth` and submits email + password (POST `/api/auth/login`).
+2. Tokens (access + refresh) stored in `localStorage`; access decoded for role (`is_manager`).
+3. Protected pages (`/dashboard`, `/employees`, `/reports`) use a `Protected` wrapper and redirect unauthenticated users to `/auth`.
+4. Manager-specific actions additionally gate UI with `is_manager` check.
+5. Auto refresh every ~14 minutes or on 401 (single retry via fetch logic); legacy `/login` now redirects into `/auth`.
+6. Logout clears tokens and scheduled refresh interval.
 
 ## Manager Actions
 
-Accessible on `/reports` if `is_manager` is true:
+Accessible on `/reports` if `is_manager` is true (page is protected and requires auth):
 
 - Create CSV: `/api/reports_generation/createAggregatedEmployeeData`
 - Send CSV: `/api/reports_generation/sendAggregatedEmployeeData`
@@ -89,29 +92,31 @@ Accessible on `/reports` if `is_manager` is true:
 
 "Final Theme Reports" palette baked into CSS variables in `globals.css`:
 
-Updated palette (2025 refresh) focuses on contrast, warmth in accents, and accessible neutrals.
+Light theme overhaul (2025 second refresh) prioritizes clarity, cool neutrals, and consistent interaction states.
 
-Core variables:
-
+Core variables (see `globals.css`):
 ```
---color-primary: #1D5B79;
---color-primary-600: #16455C;
---color-accent: #FF8E3C;
---color-danger: #E5484D;
---color-success: #2BAA74;
---color-warning: #E4B800;
---neutral-50..900: tiered grayscale/blue slate neutrals
---background: var(--neutral-100);
---color-surface / --color-surface-alt: card + subtle surface layering
+--color-primary: #2563eb (blue 600)
+--color-accent: #6366f1 (indigo 500)
+--color-success: #10b981
+--color-warning: #f59e0b
+--color-danger: #dc2626
+--neutral-50 .. 900: slate scale for backgrounds + text
+--background: var(--neutral-50)
+--color-surface / --color-surface-alt: elevated containers
+--color-border / --color-border-strong: subtle dividers
+--color-muted: var(--neutral-600) secondary text
+--radius-sm/md/lg: consistent rounded shapes
 ```
 
-Usage patterns:
-* Components pull from CSS variables via Tailwind arbitrary values (e.g. `bg-[--color-primary]`).
-* Favor `text-[--color-muted]` for secondary text; primary headings use `text-[--color-primary]`.
-* Buttons: new `accent` variant for highlight actions.
-* Dark mode auto-applies via `prefers-color-scheme: dark` media query.
+Usage guidelines:
+* Headings: `text-[--neutral-800]` or `text-[--neutral-900]`.
+* Secondary text: `text-[--color-muted]`.
+* Primary actions: `Button` variant `primary`; highlight or secondary emphasis: `accent`; low emphasis: `ghost`.
+* Avoid mixing raw hex codes—extend palette by adding new CSS variables.
+* Dark mode auto-switches via `prefers-color-scheme: dark` token adjustments.
 
-Add new semantic colors by extending `:root` with `--color-*` then referencing in components.
+To add a new brand color: define `--color-brandX` in `:root`, then reference with Tailwind arbitrary class `text-[--color-brandX]`.
 
 Use Tailwind with arbitrary values for brand shades; shared utility classes also provided.
 
