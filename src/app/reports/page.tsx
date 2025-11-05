@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
-import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees, listReports, downloadReport } from '@/lib/apiClient';
+import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees, sendAggregatedEmployeeDataLive, sendPdfToEmployeesLive, listReports, downloadReport } from '@/lib/apiClient';
 import { makeIdempotencyKey } from '@/lib/utils';
 import { Spinner } from '@/components/shadcn/spinner';
 import Link from 'next/link';
@@ -33,6 +33,8 @@ export default function ReportsPage() {
   type OpState = { key: string; status: 'idle' | 'in_progress' | 'sent' | 'cached' | 'error' | 'created'; lastMessage?: string };
   const [csvOp, setCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const [pdfOp, setPdfOp] = React.useState<OpState>({ key: '', status: 'idle' });
+  const [liveCsvOp, setLiveCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
+  const [livePdfOp, setLivePdfOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const [createCsvOp, setCreateCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const [createPdfOp, setCreatePdfOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const isManager = !!decoded?.is_manager;
@@ -40,8 +42,10 @@ export default function ReportsPage() {
   // Reset idempotent operation state when parameters change (year/month/manager)
   React.useEffect(() => {
     // Avoid clearing if currently in progress to let operation finish; else reset to idle
-    if (csvOp.status !== 'in_progress') setCsvOp({ key: '', status: 'idle' });
-    if (pdfOp.status !== 'in_progress') setPdfOp({ key: '', status: 'idle' });
+  if (csvOp.status !== 'in_progress') setCsvOp({ key: '', status: 'idle' });
+  if (pdfOp.status !== 'in_progress') setPdfOp({ key: '', status: 'idle' });
+  if (liveCsvOp.status !== 'in_progress') setLiveCsvOp({ key: '', status: 'idle' });
+  if (livePdfOp.status !== 'in_progress') setLivePdfOp({ key: '', status: 'idle' });
     if (createCsvOp.status !== 'in_progress') setCreateCsvOp({ key: '', status: 'idle' });
     if (createPdfOp.status !== 'in_progress') setCreatePdfOp({ key: '', status: 'idle' });
   }, [managerId, year, month]);
@@ -261,6 +265,54 @@ export default function ReportsPage() {
     }
   }
 
+  async function startCsvLiveSend() {
+    if (!isManager) {
+      pushLog('Manager role required: Send CSV Live');
+      return;
+    }
+    const key = liveCsvOp.key || makeIdempotencyKey('csv_live', managerId, year, month);
+    setLiveCsvOp({ key, status: 'in_progress' });
+    try {
+      const res = await sendAggregatedEmployeeDataLive(managerId, year, month, key);
+      const statusValue = res.status || (res.sent ? 'sent' : 'sent');
+      setLiveCsvOp({ key, status: statusValue === 'cached' ? 'cached' : 'sent', lastMessage: statusValue });
+      pushLog(`CSV Live send ${statusValue} (key=${key})`);
+    } catch (e: any) {
+      if (e.status === 409) {
+        pushLog(`CSV Live send in progress; retrying (key=${key})`);
+        setTimeout(() => startCsvLiveSend(), 2000);
+        return;
+      }
+      const msg = e.detail || e.message || 'CSV Live send failed';
+      setLiveCsvOp({ key, status: 'error', lastMessage: msg });
+      pushLog(`CSV Live send error: ${msg}`);
+    }
+  }
+
+  async function startPdfLiveSend() {
+    if (!isManager) {
+      pushLog('Manager role required: Send PDFs Live');
+      return;
+    }
+    const key = livePdfOp.key || makeIdempotencyKey('pdf_live', managerId, year, month);
+    setLivePdfOp({ key, status: 'in_progress' });
+    try {
+      const res = await sendPdfToEmployeesLive(managerId, year, month, false, key);
+      const statusValue = res.status || 'sent';
+      setLivePdfOp({ key, status: statusValue === 'cached' ? 'cached' : 'sent', lastMessage: statusValue });
+      pushLog(`PDF Live send ${statusValue} (key=${key})`);
+    } catch (e: any) {
+      if (e.status === 409) {
+        pushLog(`PDF Live send in progress; retrying (key=${key})`);
+        setTimeout(() => startPdfLiveSend(), 2000);
+        return;
+      }
+      const msg = e.detail || e.message || 'PDF Live send failed';
+      setLivePdfOp({ key, status: 'error', lastMessage: msg });
+      pushLog(`PDF Live send error: ${msg}`);
+    }
+  }
+
   React.useEffect(() => {
     return () => { // cleanup blob URL
       if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
@@ -311,6 +363,22 @@ export default function ReportsPage() {
                 onClick={() => startPdfSend()}
               >
                 {pdfOp.status === 'in_progress' ? 'Sending PDFs…' : pdfOp.status === 'cached' ? 'Already Sent (PDFs)' : 'Send PDFs'}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={loading || livePdfOp.status === 'in_progress'}
+                onClick={() => startPdfLiveSend()}
+              >
+                {livePdfOp.status === 'in_progress' ? 'Sending PDFs Live…' : livePdfOp.status === 'cached' ? 'Already Sent (PDFs Live)' : 'Send PDFs Live'}
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                disabled={loading || liveCsvOp.status === 'in_progress'}
+                onClick={() => startCsvLiveSend()}
+              >
+                {liveCsvOp.status === 'in_progress' ? 'Sending CSV Live…' : liveCsvOp.status === 'cached' ? 'Already Sent (CSV Live)' : 'Send CSV Live'}
               </Button>
             </div>
           </div>

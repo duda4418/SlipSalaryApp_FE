@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { Protected } from '@/components/shadcn/protected';
-import { listEmployees, listEmployeesForManager } from '@/lib/apiClient';
+import { listEmployees, listEmployeesForManager, createEmployee } from '@/lib/apiClient';
 import { useAuth } from '@/context/AuthContext';
 import { Employee } from '@/types';
 import { Spinner } from '@/components/shadcn/spinner';
@@ -26,6 +26,18 @@ export default function EmployeesPage() {
   const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | null>(null);
   const [detailError, setDetailError] = React.useState<string | null>(null);
   const [detailLoading, setDetailLoading] = React.useState(false);
+  // Create employee dialog state (manager-only)
+  const [showCreate, setShowCreate] = React.useState(false);
+  const [newFirst, setNewFirst] = React.useState('');
+  const [newLast, setNewLast] = React.useState('');
+  const [newEmail, setNewEmail] = React.useState('');
+  const [newBaseSalary, setNewBaseSalary] = React.useState<number | ''>('');
+  const [newCnp, setNewCnp] = React.useState('');
+  const [newHireDate, setNewHireDate] = React.useState<string>(() => new Date().toISOString().slice(0,10));
+  const [newIsActive, setNewIsActive] = React.useState(true);
+  const [createLoading, setCreateLoading] = React.useState(false);
+  const [createError, setCreateError] = React.useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     listEmployees().then(setEmployees).catch(e => setError(e.detail || 'Failed to load'));
@@ -81,13 +93,87 @@ export default function EmployeesPage() {
 
   function openDetail(id: string) {
     setSelectedId(id);
-    setSelectedEmployee(null);
+    // Local fallback: try to find employee in already loaded arrays to avoid blank dialog
+    const local = (employees || []).find(e => e.id === id) || (myEmployees || []).find(e => e.id === id) || null;
+    setSelectedEmployee(local);
     setDetailError(null);
+    // If local employee is a manager, skip ambiguous remote fetch (manager endpoint returns a list of direct reports)
+    if (local?.isManager) {
+      if (typeof window !== 'undefined') console.log('[DEBUG] Skipping remote fetch for manager id', id);
+      setDetailLoading(false);
+      return;
+    }
     setDetailLoading(true);
     getEmployee(id)
-      .then(emp => { setSelectedEmployee(emp); })
+      .then(emp => { 
+        if (typeof window !== 'undefined') {
+          console.log('[DEBUG] Selected employee normalized:', emp);
+        }
+        // If remote returns minimal/blank fields but we have local richer data, keep local
+        const isBlank = !emp.firstName && !emp.lastName && !emp.email;
+        setSelectedEmployee(isBlank && local ? local : emp); 
+      })
       .catch(e => setDetailError(e.detail || 'Failed to load employee'))
       .finally(() => setDetailLoading(false));
+  }
+
+  function resetCreateForm() {
+    setNewFirst('');
+    setNewLast('');
+    setNewEmail('');
+    setNewBaseSalary('');
+    setNewCnp('');
+    setNewHireDate(new Date().toISOString().slice(0,10));
+    setNewIsActive(true);
+    setCreateError(null);
+    setCreateSuccess(null);
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!decoded?.is_manager || !managerId) {
+      setCreateError('Manager role required');
+      return;
+    }
+    // Basic validation
+    if (!newFirst || !newLast || !newEmail || !newBaseSalary || !newCnp || !newHireDate) {
+      setCreateError('All fields are required');
+      return;
+    }
+    // Basic Romanian CNP validation: 13 digits
+    if (!/^\d{13}$/.test(newCnp)) {
+      setCreateError('CNP must be exactly 13 digits');
+      return;
+    }
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateSuccess(null);
+    try {
+      const payload = {
+        firstName: newFirst,
+        lastName: newLast,
+        email: newEmail,
+        baseSalary: typeof newBaseSalary === 'number' ? newBaseSalary : Number(newBaseSalary),
+        isActive: newIsActive,
+        isManager: false,
+        managerId: managerId,
+        cnp: newCnp,
+        hireDate: newHireDate,
+      } as Partial<Employee>;
+      const created = await createEmployee(payload);
+      // Update employees + myEmployees lists optimistically
+      setEmployees(prev => prev ? [...prev, created] : [created]);
+      if (created.managerId === managerId) {
+        setMyEmployees(prev => prev ? [...prev, created] : [created]);
+      }
+      setCreateSuccess(`Employee ${created.firstName} ${created.lastName} created`);
+      resetCreateForm();
+      setShowCreate(false);
+    } catch (err: any) {
+      setCreateError(err.detail || err.message || 'Create failed');
+    } finally {
+      setCreateLoading(false);
+    }
   }
 
   return (
@@ -121,8 +207,59 @@ export default function EmployeesPage() {
           <div role="tabpanel" aria-labelledby="tab-mine" className="space-y-3 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium">My Employees</h2>
-              <div className="text-xs text-muted-foreground">
-                {myEmployees ? `${myEmployees.length} managed` : 'Loading...'}
+              <div className="flex items-center gap-3">
+                <div className="text-xs text-muted-foreground">
+                  {myEmployees ? `${myEmployees.length} managed` : 'Loading...'}
+                </div>
+                <Dialog open={showCreate} onOpenChange={(o) => { setShowCreate(o); if (!o) resetCreateForm(); }}>
+                  <DialogTrigger className="text-sm text-primary hover:underline" onClick={() => setShowCreate(true)}>Add Employee</DialogTrigger>
+                  <DialogContent className="p-0 max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Add Employee</DialogTitle>
+                      <DialogDescription>Fill required fields to create a new employee assigned to you.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleCreate} className="p-6 space-y-4">
+                      {createError && <div className="text-xs text-destructive">{createError}</div>}
+                      {createSuccess && <div className="text-xs text-green-600">{createSuccess}</div>}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="newFirst" className="text-xs font-medium">First Name</label>
+                          <Input id="newFirst" value={newFirst} onChange={e => setNewFirst(e.target.value)} required />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="newLast" className="text-xs font-medium">Last Name</label>
+                          <Input id="newLast" value={newLast} onChange={e => setNewLast(e.target.value)} required />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label htmlFor="newEmail" className="text-xs font-medium">Email</label>
+                          <Input id="newEmail" type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="newCnp" className="text-xs font-medium">CNP</label>
+                          <Input id="newCnp" value={newCnp} onChange={e => setNewCnp(e.target.value)} required placeholder="13 digits" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label htmlFor="newHireDate" className="text-xs font-medium">Hire Date</label>
+                          <Input id="newHireDate" type="date" value={newHireDate} onChange={e => setNewHireDate(e.target.value)} required />
+                        </div>
+                        <div className="flex flex-col gap-1 sm:col-span-2">
+                          <label htmlFor="newBaseSalary" className="text-xs font-medium">Base Salary (RON)</label>
+                          <Input id="newBaseSalary" type="number" value={newBaseSalary} onChange={e => setNewBaseSalary(e.target.value === '' ? '' : Number(e.target.value))} required />
+                        </div>
+                        <div className="flex items-center gap-2 sm:col-span-2">
+                          <input id="newIsActive" type="checkbox" checked={newIsActive} onChange={e => setNewIsActive(e.target.checked)} />
+                          <label htmlFor="newIsActive" className="text-xs">Active</label>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <DialogClose type="button" className="text-xs px-3 py-2 rounded border">Cancel</DialogClose>
+                        <button type="submit" disabled={createLoading} className="text-xs px-3 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50">
+                          {createLoading ? 'Creating…' : 'Create'}
+                        </button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
             {myError && <div className="text-xs text-destructive">{myError}</div>}
@@ -214,7 +351,7 @@ export default function EmployeesPage() {
                                     </div>
                                     <div>
                                       <dt className="font-medium">Base Salary</dt>
-                                      <dd className="text-muted-foreground">{selectedEmployee.baseSalary.toLocaleString()} RON</dd>
+                                      <dd className="text-muted-foreground">{typeof selectedEmployee.baseSalary === 'number' ? selectedEmployee.baseSalary.toLocaleString() + ' RON' : '—'}</dd>
                                     </div>
                                     <div>
                                       <dt className="font-medium">Manager ID</dt>

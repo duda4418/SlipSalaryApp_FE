@@ -24,6 +24,7 @@ export interface Employee {
   isActive: boolean;
   isManager: boolean;
   managerId?: string | null;
+  hireDate?: string; // ISO date (YYYY-MM-DD)
   createdAt?: string;
   updatedAt?: string;
 }

@@ -121,14 +121,78 @@ export function logout() {
   clearTokens();
 }
 
-// Generic list helpers
-export const listEmployees = () => baseFetch<Employee[]>('/api/employees');
-export const getEmployee = (id: string) => baseFetch<Employee>(`/api/employees/${id}`);
+// Generic list helpers (legacy direct versions replaced below with normalized variants)
+// NOTE: legacy exports removed in favor of normalized implementations further down.
 // List employees for a specific manager. Backend endpoint provided as GET /api/employees/{manager_id} (returns array).
 // WARNING: This path overlaps with getEmployee; only call when you expect an array result.
-export const listEmployeesForManager = (managerId: string) => baseFetch<Employee[]>(`/api/employees/${managerId}`);
-export const createEmployee = (payload: Partial<Employee>) => baseFetch<Employee>('/api/employees', { method: 'POST', body: JSON.stringify(payload) });
-export const updateEmployee = (id: string, payload: Partial<Employee>) => baseFetch<Employee>(`/api/employees/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+// Employee shape normalizer (handles snake_case or camelCase from backend)
+function normalizeEmployee(raw: any): Employee {
+  if (!raw) {
+    return {
+      id: '', firstName: '', lastName: '', email: '', cnp: '', baseSalary: 0,
+      isActive: false, isManager: false, managerId: null, hireDate: undefined, createdAt: undefined, updatedAt: undefined
+    };
+  }
+  return {
+    id: raw.id,
+    firstName: raw.firstName ?? raw.first_name ?? '',
+    lastName: raw.lastName ?? raw.last_name ?? '',
+    email: raw.email ?? '',
+    cnp: raw.cnp ?? '',
+    baseSalary: raw.baseSalary ?? raw.base_salary ?? 0,
+    isActive: raw.isActive ?? raw.is_active ?? false,
+    isManager: raw.isManager ?? raw.is_manager ?? false,
+    managerId: raw.managerId ?? raw.manager_id ?? null,
+    hireDate: raw.hireDate ?? raw.hire_date,
+    createdAt: raw.createdAt ?? raw.created_at,
+    updatedAt: raw.updatedAt ?? raw.updated_at,
+  };
+}
+
+// Generic employee helpers with normalization
+export const listEmployees = async () => {
+  const data = await baseFetch<any[]>('/api/employees');
+  // Debug logging: raw server response
+  if (typeof window !== 'undefined') {
+    console.log('[DEBUG] RAW /api/employees response:', data);
+  }
+  const normalized = data.map(normalizeEmployee);
+  if (typeof window !== 'undefined') {
+    console.log('[DEBUG] NORMALIZED /api/employees:', normalized);
+  }
+  return normalized;
+};
+export const getEmployee = async (id: string) => {
+  const raw = await baseFetch<any>(`/api/employees/${id}`);
+  // If backend returns array accidentally, take first
+  if (Array.isArray(raw)) {
+    // Backend ambiguity: /api/employees/{managerId} returns a list. Attempt to find matching id; otherwise fallback.
+    if (raw.length === 0) {
+      // Return placeholder instead of throwing to avoid noisy modal errors.
+      return normalizeEmployee({ id, first_name: '', last_name: '', email: '', is_active: false, is_manager: false, base_salary: 0, cnp: '', manager_id: null });
+    }
+    const match = raw.find((r: any) => r.id === id);
+    return normalizeEmployee(match || raw[0]);
+  }
+  if (typeof window !== 'undefined') {
+    console.log('[DEBUG] RAW /api/employees/{id} response:', raw);
+  }
+  return normalizeEmployee(raw);
+};
+// List employees for a specific manager. Backend endpoint provided as GET /api/employees/{manager_id} (returns array).
+// WARNING: This path overlaps with getEmployee; only call when you expect an array result.
+export const listEmployeesForManager = async (managerId: string) => {
+  const data = await baseFetch<any[]>(`/api/employees/${managerId}`);
+  return Array.isArray(data) ? data.map(normalizeEmployee) : [];
+};
+export const createEmployee = async (payload: Partial<Employee>) => {
+  const raw = await baseFetch<any>('/api/employees', { method: 'POST', body: JSON.stringify(payload) });
+  return normalizeEmployee(raw);
+};
+export const updateEmployee = async (id: string, payload: Partial<Employee>) => {
+  const raw = await baseFetch<any>(`/api/employees/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  return normalizeEmployee(raw);
+};
 export const deleteEmployee = (id: string) => baseFetch<{ deleted: boolean; id: string }>(`/api/employees/${id}`, { method: 'DELETE' });
 
 export const listSalaryComponents = () => baseFetch<SalaryComponent[]>('/api/salary_components');
@@ -153,6 +217,19 @@ export const createPdfForEmployees = (managerId: string, year: number, month: nu
 
 export const sendPdfToEmployees = (managerId: string, year: number, month: number, regenerateMissing = false, idempotencyKey?: string) =>
   baseFetch<SendPdfResponse>(`/api/reports_generation/sendPdfToEmployees?managerId=${managerId}&year=${year}&month=${month}&regenerateMissing=${regenerateMissing}`, {
+    method: 'POST',
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+  });
+
+// Live email sending endpoints (alternate email service)
+export const sendAggregatedEmployeeDataLive = (managerId: string, year: number, month: number, idempotencyKey?: string) =>
+  baseFetch<SendAggregatedResponse>(`/api/reports_generation/sendAggregatedEmployeeDataLive?managerId=${managerId}&year=${year}&month=${month}`, {
+    method: 'POST',
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+  });
+
+export const sendPdfToEmployeesLive = (managerId: string, year: number, month: number, regenerateMissing = false, idempotencyKey?: string) =>
+  baseFetch<SendPdfResponse>(`/api/reports_generation/sendPdfToEmployeesLive?managerId=${managerId}&year=${year}&month=${month}&regenerateMissing=${regenerateMissing}`, {
     method: 'POST',
     headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
   });
