@@ -33,6 +33,7 @@ export default function ReportsPage() {
   type OpState = { key: string; status: 'idle' | 'in_progress' | 'sent' | 'cached' | 'error'; lastMessage?: string };
   const [csvOp, setCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const [pdfOp, setPdfOp] = React.useState<OpState>({ key: '', status: 'idle' });
+  const isManager = !!decoded?.is_manager;
 
   // Reset idempotent operation state when parameters change (year/month/manager)
   React.useEffect(() => {
@@ -152,8 +153,20 @@ export default function ReportsPage() {
     }
   }
 
+  // Guard to prevent non-managers from invoking manager-only endpoints while still showing UI controls
+  async function managerGuard<T>(fn: () => Promise<T>, label: string): Promise<void> {
+    if (!isManager) {
+      pushLog(`Manager role required: ${label}`);
+      return;
+    }
+    await wrap(fn, label);
+  }
+
   async function startCsvSend() {
-    if (!managerId) return;
+    if (!isManager) {
+      pushLog('Manager role required: Send CSV');
+      return;
+    }
     const key = csvOp.key || makeIdempotencyKey('csv', managerId, year, month);
     setCsvOp({ key, status: 'in_progress' });
     try {
@@ -174,7 +187,10 @@ export default function ReportsPage() {
   }
 
   async function startPdfSend() {
-    if (!managerId) return;
+    if (!isManager) {
+      pushLog('Manager role required: Send PDFs');
+      return;
+    }
     const key = pdfOp.key || makeIdempotencyKey('pdf', managerId, year, month);
     setPdfOp({ key, status: 'in_progress' });
     try {
@@ -221,18 +237,18 @@ export default function ReportsPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button disabled={!managerId || loading} onClick={() => wrap(() => createAggregatedEmployeeData(managerId, year, month, true), 'Create CSV')}>Create CSV</Button>
+            <Button disabled={loading} onClick={() => managerGuard(() => createAggregatedEmployeeData(managerId, year, month, true), 'Create CSV')}>Create CSV</Button>
             <Button
               variant="secondary"
-              disabled={!managerId || loading || csvOp.status === 'in_progress'}
+              disabled={loading || csvOp.status === 'in_progress'}
               onClick={() => startCsvSend()}
             >
               {csvOp.status === 'in_progress' ? 'Sending CSV…' : csvOp.status === 'cached' ? 'Already Sent (CSV)' : 'Send CSV'}
             </Button>
-            <Button variant="outline" disabled={!managerId || loading} onClick={() => wrap(() => createPdfForEmployees(managerId, year, month, false), 'Create PDFs')}>Create PDFs</Button>
+            <Button variant="outline" disabled={loading} onClick={() => managerGuard(() => createPdfForEmployees(managerId, year, month, false), 'Create PDFs')}>Create PDFs</Button>
             <Button
               variant="destructive"
-              disabled={!managerId || loading || pdfOp.status === 'in_progress'}
+              disabled={loading || pdfOp.status === 'in_progress'}
               onClick={() => startPdfSend()}
             >
               {pdfOp.status === 'in_progress' ? 'Sending PDFs…' : pdfOp.status === 'cached' ? 'Already Sent (PDFs)' : 'Send PDFs'}
