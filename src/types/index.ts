@@ -90,8 +90,13 @@ export type CreateAggregatedResponse = {
 };
 
 export type SendAggregatedResponse = {
-  sent: boolean;
-  recipientCount: number;
+  sent?: boolean; // legacy
+  recipientCount?: number; // legacy
+  status?: 'sent' | 'cached' | 'in_progress' | 'error';
+  fileId?: string;
+  archived?: boolean;
+  archivePath?: string;
+  idempotent?: boolean;
 };
 
 export type CreatePdfResponse = {
@@ -102,6 +107,11 @@ export type CreatePdfResponse = {
 };
 
 export type SendPdfResponse = {
-  sentCount: number;
-  missingCount: number;
+  sentCount?: number; // legacy
+  missingCount?: number; // legacy
+  status?: 'sent' | 'cached' | 'in_progress' | 'error';
+  archiveZipId?: string;
+  archiveZipPath?: string;
+  archivedPdfs?: number;
+  idempotent?: boolean;
 };

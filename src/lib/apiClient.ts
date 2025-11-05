@@ -139,14 +139,20 @@ export const createAggregatedEmployeeData = (managerId: string, year: number, mo
   baseFetch<CreateAggregatedResponse>(`/api/reports_generation/createAggregatedEmployeeData?managerId=${managerId}&year=${year}&month=${month}&includeBonuses=${includeBonuses}`,
     { method: 'POST' });
 
-export const sendAggregatedEmployeeData = (managerId: string, year: number, month: number) =>
-  baseFetch<SendAggregatedResponse>(`/api/reports_generation/sendAggregatedEmployeeData?managerId=${managerId}&year=${year}&month=${month}`, { method: 'POST' });
+export const sendAggregatedEmployeeData = (managerId: string, year: number, month: number, idempotencyKey?: string) =>
+  baseFetch<SendAggregatedResponse>(`/api/reports_generation/sendAggregatedEmployeeData?managerId=${managerId}&year=${year}&month=${month}`, {
+    method: 'POST',
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+  });
 
 export const createPdfForEmployees = (managerId: string, year: number, month: number, overwriteExisting = false) =>
   baseFetch<CreatePdfResponse>(`/api/reports_generation/createPdfForEmployees?managerId=${managerId}&year=${year}&month=${month}&overwriteExisting=${overwriteExisting}`, { method: 'POST' });
 
-export const sendPdfToEmployees = (managerId: string, year: number, month: number, regenerateMissing = false) =>
-  baseFetch<SendPdfResponse>(`/api/reports_generation/sendPdfToEmployees?managerId=${managerId}&year=${year}&month=${month}&regenerateMissing=${regenerateMissing}`, { method: 'POST' });
+export const sendPdfToEmployees = (managerId: string, year: number, month: number, regenerateMissing = false, idempotencyKey?: string) =>
+  baseFetch<SendPdfResponse>(`/api/reports_generation/sendPdfToEmployees?managerId=${managerId}&year=${year}&month=${month}&regenerateMissing=${regenerateMissing}`, {
+    method: 'POST',
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+  });
 
 // Utility to check token expiration (seconds remaining)
 export function secondsUntilExpiry(): number | null {

@@ -89,6 +89,33 @@ Accessible on `/reports` if `is_manager` is true (page is protected and requires
 - Send PDFs: `/api/reports_generation/sendPdfToEmployees`
 
 ### Report Download
+### Idempotency
+
+The following send endpoints support idempotency via an `Idempotency-Key` header (UUID v4):
+
+```
+POST /api/reports_generation/sendAggregatedEmployeeData
+POST /api/reports_generation/sendPdfToEmployees
+```
+
+Frontend integration now constructs a contextual key using `makeIdempotencyKey(op, managerId, year, month)`:
+
+Format: `<operation>-<managerId>-<year>-<MM>-<uuid>` e.g.
+
+```
+csv-612d2135-cc3b-41bc-ad3a-e1704e30cd94-2025-11-38f7b3d2
+pdf-612d2135-cc3b-41bc-ad3a-e1704e30cd94-2025-11-a9c1e541
+```
+
+If the same key is reused for the same parameters the backend returns a cached response rather than re-sending emails or regenerating archives.
+
+Implementation details:
+* Utility: `generateIdempotencyKey()` in `lib/utils.ts` (uses `crypto.randomUUID()` with a fallback).
+* API layer: Optional `idempotencyKey` param added to `sendAggregatedEmployeeData` and `sendPdfToEmployees` functions in `apiClient.ts` sets the `Idempotency-Key` header.
+* UI: Buttons on `/reports` manage operation state (`idle | in_progress | sent | cached | error`) and retry automatically on 409 (in-progress) using the SAME key.
+
+To allow manual reuse of keys (e.g. for debugging) you can extend the UI with an input bound to a state variable passed to the send functions instead of auto-generating. Current implementation auto-generates and persists per send attempt until resolved.
+
 
 Each generated file can now be downloaded directly via the secured endpoint:
 

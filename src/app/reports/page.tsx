@@ -6,6 +6,7 @@ import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees, listReports, downloadReport } from '@/lib/apiClient';
+import { makeIdempotencyKey } from '@/lib/utils';
 import { Spinner } from '@/components/shadcn/spinner';
 import Link from 'next/link';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/shadcn/dialog';
@@ -28,6 +29,17 @@ export default function ReportsPage() {
   const [downloadLoading, setDownloadLoading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
   const [downloadSuccess, setDownloadSuccess] = React.useState<string | null>(null);
+  // Idempotent operation tracking state
+  type OpState = { key: string; status: 'idle' | 'in_progress' | 'sent' | 'cached' | 'error'; lastMessage?: string };
+  const [csvOp, setCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
+  const [pdfOp, setPdfOp] = React.useState<OpState>({ key: '', status: 'idle' });
+
+  // Reset idempotent operation state when parameters change (year/month/manager)
+  React.useEffect(() => {
+    // Avoid clearing if currently in progress to let operation finish; else reset to idle
+    if (csvOp.status !== 'in_progress') setCsvOp({ key: '', status: 'idle' });
+    if (pdfOp.status !== 'in_progress') setPdfOp({ key: '', status: 'idle' });
+  }, [managerId, year, month]);
 
   const pushLog = (msg: string) => setLog(l => [msg, ...l]);
 
@@ -140,6 +152,48 @@ export default function ReportsPage() {
     }
   }
 
+  async function startCsvSend() {
+    if (!managerId) return;
+    const key = csvOp.key || makeIdempotencyKey('csv', managerId, year, month);
+    setCsvOp({ key, status: 'in_progress' });
+    try {
+      const res = await sendAggregatedEmployeeData(managerId, year, month, key);
+      const statusValue = res.status || (res.sent ? 'sent' : 'sent');
+      setCsvOp({ key, status: statusValue === 'cached' ? 'cached' : 'sent', lastMessage: statusValue });
+      pushLog(`CSV send ${statusValue} (key=${key})`);
+    } catch (e: any) {
+      if (e.status === 409) {
+        pushLog(`CSV send in progress; retrying (key=${key})`);
+        setTimeout(() => startCsvSend(), 2000);
+        return;
+      }
+      const msg = e.detail || e.message || 'CSV send failed';
+      setCsvOp({ key, status: 'error', lastMessage: msg });
+      pushLog(`CSV send error: ${msg}`);
+    }
+  }
+
+  async function startPdfSend() {
+    if (!managerId) return;
+    const key = pdfOp.key || makeIdempotencyKey('pdf', managerId, year, month);
+    setPdfOp({ key, status: 'in_progress' });
+    try {
+      const res = await sendPdfToEmployees(managerId, year, month, false, key);
+      const statusValue = res.status || 'sent';
+      setPdfOp({ key, status: statusValue === 'cached' ? 'cached' : 'sent', lastMessage: statusValue });
+      pushLog(`PDF send ${statusValue} (key=${key})`);
+    } catch (e: any) {
+      if (e.status === 409) {
+        pushLog(`PDF send in progress; retrying (key=${key})`);
+        setTimeout(() => startPdfSend(), 2000);
+        return;
+      }
+      const msg = e.detail || e.message || 'PDF send failed';
+      setPdfOp({ key, status: 'error', lastMessage: msg });
+      pushLog(`PDF send error: ${msg}`);
+    }
+  }
+
   React.useEffect(() => {
     return () => { // cleanup blob URL
       if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
@@ -168,9 +222,21 @@ export default function ReportsPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button disabled={!managerId || loading} onClick={() => wrap(() => createAggregatedEmployeeData(managerId, year, month, true), 'Create CSV')}>Create CSV</Button>
-            <Button variant="secondary" disabled={!managerId || loading} onClick={() => wrap(() => sendAggregatedEmployeeData(managerId, year, month), 'Send CSV')}>Send CSV</Button>
+            <Button
+              variant="secondary"
+              disabled={!managerId || loading || csvOp.status === 'in_progress'}
+              onClick={() => startCsvSend()}
+            >
+              {csvOp.status === 'in_progress' ? 'Sending CSV…' : csvOp.status === 'cached' ? 'Already Sent (CSV)' : 'Send CSV'}
+            </Button>
             <Button variant="outline" disabled={!managerId || loading} onClick={() => wrap(() => createPdfForEmployees(managerId, year, month, false), 'Create PDFs')}>Create PDFs</Button>
-            <Button variant="destructive" disabled={!managerId || loading} onClick={() => wrap(() => sendPdfToEmployees(managerId, year, month, false), 'Send PDFs')}>Send PDFs</Button>
+            <Button
+              variant="destructive"
+              disabled={!managerId || loading || pdfOp.status === 'in_progress'}
+              onClick={() => startPdfSend()}
+            >
+              {pdfOp.status === 'in_progress' ? 'Sending PDFs…' : pdfOp.status === 'cached' ? 'Already Sent (PDFs)' : 'Send PDFs'}
+            </Button>
           </div>
           {loading && <Spinner />}
         </div>
