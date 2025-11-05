@@ -5,31 +5,146 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
-import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees } from '@/lib/apiClient';
+import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees, listReports, downloadReport } from '@/lib/apiClient';
 import { Spinner } from '@/components/shadcn/spinner';
 import Link from 'next/link';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/shadcn/dialog';
+import { Badge } from '@/components/shadcn/badge';
 
 export default function ReportsPage() {
-  const { decoded } = useAuth();
+  const { decoded, accessToken } = useAuth();
   const managerId = decoded?.sub || '';
   const [year, setYear] = React.useState<number>(new Date().getFullYear());
   const [month, setMonth] = React.useState<number>(new Date().getMonth() + 1);
   const [log, setLog] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [reports, setReports] = React.useState<import('@/types').ReportFile[] | null>(null);
+  const [reportsError, setReportsError] = React.useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = React.useState(false);
+  const [previewError, setPreviewError] = React.useState<string | null>(null);
+  const [previewCsv, setPreviewCsv] = React.useState<string | null>(null);
+  const [previewPdfUrl, setPreviewPdfUrl] = React.useState<string | null>(null);
+  const [selectedReport, setSelectedReport] = React.useState<import('@/types').ReportFile | null>(null);
+  const [downloadLoading, setDownloadLoading] = React.useState(false);
+  const [downloadError, setDownloadError] = React.useState<string | null>(null);
+  const [downloadSuccess, setDownloadSuccess] = React.useState<string | null>(null);
 
   const pushLog = (msg: string) => setLog(l => [msg, ...l]);
+
+  const refreshReports = React.useCallback(() => {
+    listReports().then(setReports).catch(e => setReportsError(e.detail || 'Failed to list reports'));
+  }, []);
+
+  React.useEffect(() => { refreshReports(); }, [refreshReports]);
 
   const wrap = async (fn: () => Promise<any>, label: string) => {
     setLoading(true);
     try {
       const res = await fn();
       pushLog(`${label} success: ${JSON.stringify(res)}`);
-    } catch (e: any) {
-      pushLog(`${label} failed: ${e.detail || e.message}`);
+      // Refresh reports after successful generation/send
+      refreshReports();
+    } catch (e: unknown) {
+      const detail = (e as any)?.detail || (e instanceof Error ? e.message : 'Unknown error');
+      pushLog(`${label} failed: ${detail}`);
     } finally {
       setLoading(false);
     }
   };
+
+  function buildFileUrl(path: string) {
+    const base = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+    // Start from either full URL or compose from base
+    let full: string;
+    if (path.startsWith('http')) {
+      full = path;
+    } else {
+      const relative = path.startsWith('/') ? path : `/${path}`;
+      full = `${base}${relative}`;
+    }
+    // Normalize: ensure /api/reports/ instead of /reports/ if missing
+    try {
+      const urlObj = new URL(full);
+      if (urlObj.pathname.startsWith('/reports/')) {
+        // Avoid double insertion
+        urlObj.pathname = urlObj.pathname.startsWith('/api/reports/')
+          ? urlObj.pathname
+          : `/api${urlObj.pathname}`;
+        return urlObj.toString();
+      }
+      // Also handle case where backend accidentally returns //reports//...
+      if (urlObj.pathname.includes('/reports/')) {
+        urlObj.pathname = urlObj.pathname.replace(/\/reports\//, '/api/reports/');
+        return urlObj.toString();
+      }
+      return full;
+    } catch {
+      // Fallback regex on string if URL parsing fails
+      return full.replace(/(https?:\/\/[^/]+)\/reports\//, '$1/api/reports/');
+    }
+  }
+
+  async function openReport(r: import('@/types').ReportFile) {
+    setSelectedReport(r);
+    setPreviewError(null);
+    setPreviewCsv(null);
+    setPreviewPdfUrl(null);
+    setPreviewLoading(true);
+    setDownloadError(null);
+    setDownloadSuccess(null);
+    try {
+      // Fetch via dedicated download endpoint using report ID (not manager/owner ID path)
+      const { blob, filename, contentType } = await downloadReport(r.id);
+      if (r.type === 'csv' || contentType.includes('csv') || filename.endsWith('.csv')) {
+        const text = await blob.text();
+        const lines = text.split(/\r?\n/).slice(0, 50).join('\n');
+        setPreviewCsv(lines);
+      } else if (r.type === 'pdf' || contentType.includes('pdf') || filename.endsWith('.pdf')) {
+        const url = URL.createObjectURL(blob);
+        setPreviewPdfUrl(url);
+      } else {
+        setPreviewError('Unsupported file type for preview');
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to load file';
+      setPreviewError(msg);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  async function handleDownload() {
+    if (!selectedReport) return;
+    setDownloadLoading(true);
+    setDownloadError(null);
+    setDownloadSuccess(null);
+    try {
+      const { blob, filename } = await downloadReport(selectedReport.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setDownloadSuccess(`Downloaded ${filename}`);
+      pushLog(`Download success: ${filename}`);
+      // revoke after a short delay to allow browser to start saving
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (e: unknown) {
+      const msg = (e as any)?.detail || (e instanceof Error ? e.message : 'Download failed');
+      setDownloadError(msg);
+      pushLog(`Download failed: ${msg}`);
+    } finally {
+      setDownloadLoading(false);
+    }
+  }
+
+  React.useEffect(() => {
+    return () => { // cleanup blob URL
+      if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
+    };
+  }, [previewPdfUrl]);
 
   return (
     <Protected fallback={<div className="p-6 text-center text-[--color-muted]">Please sign in to access reports.</div>}>
@@ -38,7 +153,7 @@ export default function ReportsPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-[--neutral-800]">Reports</h1>
         <Link href="/dashboard" className="text-sm text-[--color-primary] hover:underline">Back</Link>
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-4 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm">
           <h2 className="text-lg font-medium text-[--neutral-800]">Parameters</h2>
           <div className="flex gap-4">
@@ -64,6 +179,74 @@ export default function ReportsPage() {
           <ul className="space-y-1 text-xs max-h-80 overflow-auto">
             {log.map((l, i) => <li key={i} className="rounded bg-[--neutral-100] p-2 text-[--neutral-700]">{l}</li>)}
           </ul>
+        </div>
+        <div className="space-y-2 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm md:col-span-2 lg:col-span-1">
+          <h2 className="text-lg font-medium text-[--neutral-800] flex items-center justify-between">Generated Files {reports === null && <Spinner />}</h2>
+          {reportsError && <div className="text-xs text-destructive">{reportsError}</div>}
+          {reports && reports.length === 0 && <div className="text-xs text-muted-foreground">No report files generated yet.</div>}
+          {reports && reports.length > 0 && (
+            <div className="relative w-full overflow-auto max-h-80">
+              <table className="w-full text-xs">
+                <thead className="border-b bg-[--neutral-50]">
+                  <tr>
+                    <th className="px-2 py-1 text-left font-medium">Type</th>
+                    <th className="px-2 py-1 text-left font-medium">Path</th>
+                    <th className="px-2 py-1 text-left font-medium">Created</th>
+                    <th className="px-2 py-1"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reports.map(r => (
+                    <tr key={r.id} className="border-b last:border-0 hover:bg-[--neutral-100]">
+                      <td className="px-2 py-1"><Badge variant={r.type === 'pdf' ? 'secondary' : 'outline'}>{r.type.toUpperCase()}</Badge></td>
+                      <td className="px-2 py-1 font-mono truncate max-w-[140px]" title={r.path}>{r.path}</td>
+                      <td className="px-2 py-1">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}</td>
+                      <td className="px-2 py-1">
+                        <Dialog>
+                          <DialogTrigger className="text-primary hover:underline" onClick={() => openReport(r)}>Open</DialogTrigger>
+                          <DialogContent className="p-0 max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Report File</DialogTitle>
+                              <DialogDescription>{selectedReport?.path}</DialogDescription>
+                            </DialogHeader>
+                            <div className="p-6 space-y-4">
+                              {previewLoading && <Spinner />}
+                              {previewError && <div className="text-destructive text-sm">{previewError}</div>}
+                              {selectedReport && !previewLoading && !previewError && (
+                                <>
+                                  {selectedReport.type === 'csv' && previewCsv && (
+                                    <pre className="text-xs rounded border bg-muted p-3 overflow-auto max-h-96 whitespace-pre-wrap">{previewCsv}</pre>
+                                  )}
+                                  {selectedReport.type === 'pdf' && previewPdfUrl && (
+                                    <iframe src={previewPdfUrl} className="w-full h-[70vh] rounded border" title="PDF Preview" />
+                                  )}
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex gap-2 items-center">
+                                      <Button size="sm" variant="secondary" disabled={downloadLoading} onClick={handleDownload}>
+                                        {downloadLoading ? 'Downloading...' : 'Download'}
+                                      </Button>
+                                      <Button size="sm" variant="outline" onClick={() => selectedReport && openReport(selectedReport)} disabled={previewLoading}>
+                                        Refresh Preview
+                                      </Button>
+                                    </div>
+                                    {downloadError && <div className="text-xs text-destructive">{downloadError}</div>}
+                                    {downloadSuccess && <div className="text-xs text-green-600">{downloadSuccess}</div>}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            <DialogFooter>
+                              <DialogClose />
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -88,6 +88,21 @@ Accessible on `/reports` if `is_manager` is true (page is protected and requires
 - Create PDFs: `/api/reports_generation/createPdfForEmployees`
 - Send PDFs: `/api/reports_generation/sendPdfToEmployees`
 
+### Report Download
+
+Each generated file can now be downloaded directly via the secured endpoint:
+
+`GET /api/reports/{report_id}/download`
+
+Frontend integration (`downloadReport(reportId)`) handles:
+* Authorization header (Bearer access token)
+* Parsing `Content-Disposition` to derive filename
+* Blob creation and automatic trigger of browser download
+
+If the backend sets a content type (`application/pdf` or `text/csv`) but no filename, a sensible fallback is applied (e.g. `report-<id>.pdf`).
+
+Errors are surfaced in the activity log and inline below the download button inside the report preview dialog.
+
 ## Styling
 
 "Final Theme Reports" palette baked into CSS variables in `globals.css`:

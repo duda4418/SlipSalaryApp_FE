@@ -166,3 +166,37 @@ export function scheduleAutoRefresh(callback: () => Promise<void>): number {
     callback().catch(() => {/* ignore */});
   }, fourteenMinutesMs);
 }
+
+// Download a binary report file by ID via the dedicated download endpoint.
+// Returns blob + suggested filename + contentType.
+export async function downloadReport(reportId: string): Promise<{ blob: Blob; filename: string; contentType: string }> {
+  const ensured = `${API_BASE}${API_PREFIX}/reports/${reportId}/download`;
+  const tokens = getStoredTokens();
+  const headers: Record<string, string> = {};
+  if (tokens.access) headers['Authorization'] = `Bearer ${tokens.access}`;
+  const res = await fetch(ensured, { headers });
+  if (!res.ok) {
+    let detail = `Download failed (HTTP ${res.status})`;
+    try {
+      const data = await res.json();
+      detail = data.detail || detail;
+    } catch {/* ignore JSON parse */}
+    const error: ApiError = { status: res.status, detail };
+    throw error;
+  }
+  const contentType = res.headers.get('Content-Type') || 'application/octet-stream';
+  const disposition = res.headers.get('Content-Disposition') || '';
+  let filename = `report-${reportId}`;
+  const match = disposition.match(/filename\*=UTF-8''([^;\n]+)|filename="?([^";\n]+)"?/i);
+  if (match) {
+    filename = decodeURIComponent(match[1] || match[2]);
+  } else {
+    // Append extension guess based on content type if missing
+    if (!/\.[a-zA-Z0-9]{2,5}$/.test(filename)) {
+      if (contentType.includes('pdf')) filename += '.pdf';
+      else if (contentType.includes('csv')) filename += '.csv';
+    }
+  }
+  const blob = await res.blob();
+  return { blob, filename, contentType };
+}
