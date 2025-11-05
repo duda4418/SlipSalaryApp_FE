@@ -30,9 +30,11 @@ export default function ReportsPage() {
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
   const [downloadSuccess, setDownloadSuccess] = React.useState<string | null>(null);
   // Idempotent operation tracking state
-  type OpState = { key: string; status: 'idle' | 'in_progress' | 'sent' | 'cached' | 'error'; lastMessage?: string };
+  type OpState = { key: string; status: 'idle' | 'in_progress' | 'sent' | 'cached' | 'error' | 'created'; lastMessage?: string };
   const [csvOp, setCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const [pdfOp, setPdfOp] = React.useState<OpState>({ key: '', status: 'idle' });
+  const [createCsvOp, setCreateCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
+  const [createPdfOp, setCreatePdfOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const isManager = !!decoded?.is_manager;
 
   // Reset idempotent operation state when parameters change (year/month/manager)
@@ -40,7 +42,56 @@ export default function ReportsPage() {
     // Avoid clearing if currently in progress to let operation finish; else reset to idle
     if (csvOp.status !== 'in_progress') setCsvOp({ key: '', status: 'idle' });
     if (pdfOp.status !== 'in_progress') setPdfOp({ key: '', status: 'idle' });
+    if (createCsvOp.status !== 'in_progress') setCreateCsvOp({ key: '', status: 'idle' });
+    if (createPdfOp.status !== 'in_progress') setCreatePdfOp({ key: '', status: 'idle' });
   }, [managerId, year, month]);
+  async function startCsvCreate() {
+    if (!isManager) {
+      pushLog('Manager role required: Create CSV');
+      return;
+    }
+    const key = createCsvOp.key || makeIdempotencyKey('create_csv', managerId, year, month);
+    setCreateCsvOp({ key, status: 'in_progress' });
+    try {
+      const res = await createAggregatedEmployeeData(managerId, year, month, true, key);
+      const statusValue = res.status || 'created';
+      setCreateCsvOp({ key, status: statusValue === 'cached' ? 'cached' : 'created', lastMessage: statusValue });
+      pushLog(`CSV create ${statusValue} (key=${key})`);
+    } catch (e: any) {
+      if (e.status === 409) {
+        pushLog(`CSV create in progress; retrying (key=${key})`);
+        setTimeout(() => startCsvCreate(), 2000);
+        return;
+      }
+      const msg = e.detail || e.message || 'CSV create failed';
+      setCreateCsvOp({ key, status: 'error', lastMessage: msg });
+      pushLog(`CSV create error: ${msg}`);
+    }
+  }
+
+  async function startPdfCreate() {
+    if (!isManager) {
+      pushLog('Manager role required: Create PDFs');
+      return;
+    }
+    const key = createPdfOp.key || makeIdempotencyKey('create_pdfs', managerId, year, month);
+    setCreatePdfOp({ key, status: 'in_progress' });
+    try {
+      const res = await createPdfForEmployees(managerId, year, month, false, key);
+      const statusValue = res.status || 'created';
+      setCreatePdfOp({ key, status: statusValue === 'cached' ? 'cached' : 'created', lastMessage: statusValue });
+      pushLog(`PDF create ${statusValue} (key=${key})`);
+    } catch (e: any) {
+      if (e.status === 409) {
+        pushLog(`PDF create in progress; retrying (key=${key})`);
+        setTimeout(() => startPdfCreate(), 2000);
+        return;
+      }
+      const msg = e.detail || e.message || 'PDF create failed';
+      setCreatePdfOp({ key, status: 'error', lastMessage: msg });
+      pushLog(`PDF create error: ${msg}`);
+    }
+  }
 
   const pushLog = (msg: string) => setLog(l => [msg, ...l]);
 
@@ -239,7 +290,9 @@ export default function ReportsPage() {
           </div>
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap gap-2">
-              <Button disabled={loading} onClick={() => managerGuard(() => createAggregatedEmployeeData(managerId, year, month, true), 'Create CSV')}>Create CSV</Button>
+              <Button disabled={loading || createCsvOp.status === 'in_progress'} onClick={() => startCsvCreate()}>
+                {createCsvOp.status === 'in_progress' ? 'Creating CSV…' : createCsvOp.status === 'cached' ? 'Already Created (CSV)' : createCsvOp.status === 'created' ? 'Created (CSV)' : 'Create CSV'}
+              </Button>
               <Button
                 variant="secondary"
                 disabled={loading || csvOp.status === 'in_progress'}
@@ -249,7 +302,9 @@ export default function ReportsPage() {
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" disabled={loading} onClick={() => managerGuard(() => createPdfForEmployees(managerId, year, month, false), 'Create PDFs')}>Create PDFs</Button>
+              <Button variant="outline" disabled={loading || createPdfOp.status === 'in_progress'} onClick={() => startPdfCreate()}>
+                {createPdfOp.status === 'in_progress' ? 'Creating PDFs…' : createPdfOp.status === 'cached' ? 'Already Created (PDFs)' : createPdfOp.status === 'created' ? 'Created (PDFs)' : 'Create PDFs'}
+              </Button>
               <Button
                 variant="destructive"
                 disabled={loading || pdfOp.status === 'in_progress'}

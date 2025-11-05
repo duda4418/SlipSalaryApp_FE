@@ -21,7 +21,7 @@ export function generateIdempotencyKey(): string {
 
 // Compose a deterministic-ish idempotency key prefix with contextual params + random UUID.
 // Format: <operation>-<managerId>-<year>-<MM>-<uuid>
-export function makeIdempotencyKey(op: 'csv' | 'pdf', managerId: string, year: number, month: number): string {
+export function makeIdempotencyKey(op: 'csv' | 'pdf' | 'create_csv' | 'create_pdfs', managerId: string, year: number, month: number): string {
   const mm = String(month).padStart(2, '0');
   return `${op}-${managerId}-${year}-${mm}-${generateIdempotencyKey()}`;
 }

@@ -87,6 +87,9 @@ export type CreateAggregatedResponse = {
   fileId: string;
   path: string;
   archived: boolean;
+  // Idempotency-enhanced fields (optional; present when using Idempotency-Key)
+  status?: 'created' | 'cached' | 'in_progress' | 'error';
+  idempotent?: boolean;
 };
 
 export type SendAggregatedResponse = {
@@ -104,6 +107,9 @@ export type CreatePdfResponse = {
   skippedCount: number;
   month: number;
   year: number;
+  // Idempotency-enhanced fields (optional)
+  status?: 'created' | 'cached' | 'in_progress' | 'error';
+  idempotent?: boolean;
 };
 
 export type SendPdfResponse = {

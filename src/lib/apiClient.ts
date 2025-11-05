@@ -138,9 +138,9 @@ export const listReports = () => baseFetch<ReportFile[]>('/api/reports');
 export const listIdempotencyKeys = () => baseFetch<IdempotencyKey[]>('/api/idempotency_keys');
 
 // Report generation (manager-only)
-export const createAggregatedEmployeeData = (managerId: string, year: number, month: number, includeBonuses = true) =>
+export const createAggregatedEmployeeData = (managerId: string, year: number, month: number, includeBonuses = true, idempotencyKey?: string) =>
   baseFetch<CreateAggregatedResponse>(`/api/reports_generation/createAggregatedEmployeeData?managerId=${managerId}&year=${year}&month=${month}&includeBonuses=${includeBonuses}`,
-    { method: 'POST' });
+    { method: 'POST', headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined });
 
 export const sendAggregatedEmployeeData = (managerId: string, year: number, month: number, idempotencyKey?: string) =>
   baseFetch<SendAggregatedResponse>(`/api/reports_generation/sendAggregatedEmployeeData?managerId=${managerId}&year=${year}&month=${month}`, {
@@ -148,8 +148,8 @@ export const sendAggregatedEmployeeData = (managerId: string, year: number, mont
     headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
   });
 
-export const createPdfForEmployees = (managerId: string, year: number, month: number, overwriteExisting = false) =>
-  baseFetch<CreatePdfResponse>(`/api/reports_generation/createPdfForEmployees?managerId=${managerId}&year=${year}&month=${month}&overwriteExisting=${overwriteExisting}`, { method: 'POST' });
+export const createPdfForEmployees = (managerId: string, year: number, month: number, overwriteExisting = false, idempotencyKey?: string) =>
+  baseFetch<CreatePdfResponse>(`/api/reports_generation/createPdfForEmployees?managerId=${managerId}&year=${year}&month=${month}&overwriteExisting=${overwriteExisting}`, { method: 'POST', headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined });
 
 export const sendPdfToEmployees = (managerId: string, year: number, month: number, regenerateMissing = false, idempotencyKey?: string) =>
   baseFetch<SendPdfResponse>(`/api/reports_generation/sendPdfToEmployees?managerId=${managerId}&year=${year}&month=${month}&regenerateMissing=${regenerateMissing}`, {
