@@ -340,46 +340,58 @@ export default function ReportsPage() {
               <Input id="month" type="number" value={month} onChange={e => setMonth(Number(e.target.value))} />
             </div>
           </div>
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap gap-2">
-              <Button disabled={loading || createCsvOp.status === 'in_progress'} onClick={() => startCsvCreate()}>
-                {createCsvOp.status === 'in_progress' ? 'Creating CSV…' : createCsvOp.status === 'cached' ? 'Already Created (CSV)' : createCsvOp.status === 'created' ? 'Created (CSV)' : 'Create CSV'}
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={loading || csvOp.status === 'in_progress'}
-                onClick={() => startCsvSend()}
-              >
-                {csvOp.status === 'in_progress' ? 'Sending CSV…' : csvOp.status === 'cached' ? 'Already Sent (CSV)' : 'Send CSV'}
-              </Button>
+          <div className="space-y-4">
+            {/* Generation Group */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold tracking-wide text-[--neutral-700] uppercase">Generate</h3>
+                {loading && <Spinner />}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button className="w-full" disabled={loading || createCsvOp.status === 'in_progress'} onClick={() => startCsvCreate()}>
+                  {createCsvOp.status === 'in_progress' ? 'Creating CSV…' : createCsvOp.status === 'cached' ? 'Already Created (CSV)' : createCsvOp.status === 'created' ? 'Created (CSV)' : 'Create CSV'}
+                </Button>
+                <Button className="w-full" variant="outline" disabled={loading || createPdfOp.status === 'in_progress'} onClick={() => startPdfCreate()}>
+                  {createPdfOp.status === 'in_progress' ? 'Creating PDFs…' : createPdfOp.status === 'cached' ? 'Already Created (PDFs)' : createPdfOp.status === 'created' ? 'Created (PDFs)' : 'Create PDFs'}
+                </Button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" disabled={loading || createPdfOp.status === 'in_progress'} onClick={() => startPdfCreate()}>
-                {createPdfOp.status === 'in_progress' ? 'Creating PDFs…' : createPdfOp.status === 'cached' ? 'Already Created (PDFs)' : createPdfOp.status === 'created' ? 'Created (PDFs)' : 'Create PDFs'}
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={loading || pdfOp.status === 'in_progress'}
-                onClick={() => startPdfSend()}
-              >
-                {pdfOp.status === 'in_progress' ? 'Sending PDFs…' : pdfOp.status === 'cached' ? 'Already Sent (PDFs)' : 'Send PDFs'}
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={loading || livePdfOp.status === 'in_progress'}
-                onClick={() => startPdfLiveSend()}
-              >
-                {livePdfOp.status === 'in_progress' ? 'Sending PDFs Live…' : livePdfOp.status === 'cached' ? 'Already Sent (PDFs Live)' : 'Send PDFs Live'}
-              </Button>
+            {/* Send Group */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold tracking-wide text-[--neutral-700] uppercase">Send (Queued)</h3>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button className="w-full" variant="secondary" disabled={loading || csvOp.status === 'in_progress'} onClick={() => startCsvSend()}>
+                  {csvOp.status === 'in_progress' ? 'Sending CSV…' : csvOp.status === 'cached' ? 'Already Sent (CSV)' : 'Send CSV'}
+                </Button>
+                <Button className="w-full" variant="destructive" disabled={loading || pdfOp.status === 'in_progress'} onClick={() => startPdfSend()}>
+                  {pdfOp.status === 'in_progress' ? 'Sending PDFs…' : pdfOp.status === 'cached' ? 'Already Sent (PDFs)' : 'Send PDFs'}
+                </Button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                disabled={loading || liveCsvOp.status === 'in_progress'}
-                onClick={() => startCsvLiveSend()}
-              >
-                {liveCsvOp.status === 'in_progress' ? 'Sending CSV Live…' : liveCsvOp.status === 'cached' ? 'Already Sent (CSV Live)' : 'Send CSV Live'}
-              </Button>
+            {/* Live Send Group */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold tracking-wide text-[--neutral-700] uppercase">Send (Live)</h3>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button className="w-full" variant="secondary" disabled={loading || liveCsvOp.status === 'in_progress'} onClick={() => startCsvLiveSend()}>
+                  {liveCsvOp.status === 'in_progress' ? 'Sending CSV Live…' : liveCsvOp.status === 'cached' ? 'Already Sent (CSV Live)' : 'Send CSV Live'}
+                </Button>
+                <Button className="w-full" variant="outline" disabled={loading || livePdfOp.status === 'in_progress'} onClick={() => startPdfLiveSend()}>
+                  {livePdfOp.status === 'in_progress' ? 'Sending PDFs Live…' : livePdfOp.status === 'cached' ? 'Already Sent (PDFs Live)' : 'Send PDFs Live'}
+                </Button>
+              </div>
+            </div>
+            {/* Status Row (compact overview) */}
+            <div className="mt-2 grid gap-2 text-[10px] sm:grid-cols-3">
+              <div className="flex items-center gap-1"><span className="font-medium">CSV Create:</span><Badge variant={createCsvOp.status === 'error' ? 'destructive' : createCsvOp.status === 'cached' ? 'secondary' : 'outline'}>{createCsvOp.status}</Badge></div>
+              <div className="flex items-center gap-1"><span className="font-medium">PDF Create:</span><Badge variant={createPdfOp.status === 'error' ? 'destructive' : createPdfOp.status === 'cached' ? 'secondary' : 'outline'}>{createPdfOp.status}</Badge></div>
+              <div className="flex items-center gap-1"><span className="font-medium">CSV Send:</span><Badge variant={csvOp.status === 'error' ? 'destructive' : csvOp.status === 'cached' ? 'secondary' : 'outline'}>{csvOp.status}</Badge></div>
+              <div className="flex items-center gap-1"><span className="font-medium">PDF Send:</span><Badge variant={pdfOp.status === 'error' ? 'destructive' : pdfOp.status === 'cached' ? 'secondary' : 'outline'}>{pdfOp.status}</Badge></div>
+              <div className="flex items-center gap-1"><span className="font-medium">CSV Live:</span><Badge variant={liveCsvOp.status === 'error' ? 'destructive' : liveCsvOp.status === 'cached' ? 'secondary' : 'outline'}>{liveCsvOp.status}</Badge></div>
+              <div className="flex items-center gap-1"><span className="font-medium">PDF Live:</span><Badge variant={livePdfOp.status === 'error' ? 'destructive' : livePdfOp.status === 'cached' ? 'secondary' : 'outline'}>{livePdfOp.status}</Badge></div>
             </div>
           </div>
           {loading && <Spinner />}

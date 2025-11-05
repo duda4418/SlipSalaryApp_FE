@@ -177,11 +177,11 @@ export default function EmployeesPage() {
   }
 
   return (
-    <Protected fallback={<div className="p-6 text-center text-muted-foreground">Please sign in to view employees.</div>}>
-      <div className="p-6 space-y-4">
+    <Protected fallback={<div className="p-8 text-center text-[#666666]">Please sign in to view employees.</div>}>
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
-          <Link href="/dashboard" className="text-sm text-primary hover:underline">Back</Link>
+          <h1 className="text-3xl font-semibold tracking-tight text-[#1A1A1A]">Employees</h1>
+          <Link href="/dashboard" className="text-sm text-[#FF3366] hover:text-[#FF1F55] hover:underline transition-colors">Back</Link>
         </div>
         {/* Tabs header */}
         <div className="flex items-center gap-2 border-b border-[--color-border]">
@@ -204,11 +204,11 @@ export default function EmployeesPage() {
         </div>
         {/* Tab panels */}
         {activeTab === 'mine' && decoded?.is_manager && (
-          <div role="tabpanel" aria-labelledby="tab-mine" className="space-y-3 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm">
+          <div role="tabpanel" aria-labelledby="tab-mine" className="space-y-4 rounded-lg border border-[#EEEEEE] bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">My Employees</h2>
-              <div className="flex items-center gap-3">
-                <div className="text-xs text-muted-foreground">
+              <h2 className="text-xl font-medium text-[#1A1A1A]">My Employees</h2>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-[#666666]">
                   {myEmployees ? `${myEmployees.length} managed` : 'Loading...'}
                 </div>
                 <Dialog open={showCreate} onOpenChange={(o) => { setShowCreate(o); if (!o) resetCreateForm(); }}>

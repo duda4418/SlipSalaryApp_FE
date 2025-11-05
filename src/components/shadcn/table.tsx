@@ -7,7 +7,7 @@ export const Table = React.forwardRef<HTMLTableElement, TableProps>(
     <div className="relative w-full overflow-auto">
       <table
         ref={ref}
-        className={cn('w-full caption-bottom text-sm', className)}
+        className={cn('w-full caption-bottom text-sm bg-white rounded-lg overflow-hidden', className)}
         {...props}
       />
     </div>
@@ -20,7 +20,7 @@ export const THead = React.forwardRef<HTMLTableSectionElement, THeadProps>(
   ({ className, ...props }, ref) => (
     <thead
       ref={ref}
-      className={cn('[&_tr]:border-b', className)}
+      className={cn('[&_tr]:border-b border-[#EEEEEE] bg-[#FAFAFA] font-medium text-[#1A1A1A]', className)}
       {...props}
     />
   )

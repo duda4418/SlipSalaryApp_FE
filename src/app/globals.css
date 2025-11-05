@@ -4,49 +4,66 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Primary & Accent (accessible contrast) */
-  --color-primary: #2563eb; /* Blue 600 */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-600: #1d4ed8; /* Hover */
-  --color-primary-700: #1e40af;
-  --color-accent: #6366f1; /* Indigo 500 */
-  --color-accent-600: #4f46e5;
+  /* Endava Brand Colors */
+  --color-primary: #FF3366; /* Endava Pink */
+  --color-primary-50: #FFF0F4;
+  --color-primary-100: #FFE1E9;
+  --color-primary-200: #FFB3C7;
+  --color-primary-300: #FF85A5;
+  --color-primary-400: #FF5784;
+  --color-primary-500: #FF3366; /* Base */
+  --color-primary-600: #FF1F55; /* Hover */
+  --color-primary-700: #E61E4D;
+  --color-primary-800: #CC1B44;
+  --color-primary-900: #B3183B;
+
+  /* Secondary Colors */
+  --color-accent: #1A1A1A; /* Endava Dark */
+  --color-accent-50: #F5F5F5;
+  --color-accent-100: #E6E6E6;
+  --color-accent-200: #CCCCCC;
+  --color-accent-300: #B3B3B3;
+  --color-accent-400: #999999;
+  --color-accent-500: #808080;
+  --color-accent-600: #666666;
+  --color-accent-700: #4D4D4D;
+  --color-accent-800: #333333;
+  --color-accent-900: #1A1A1A;
   --color-accent-contrast: #ffffff;
 
-  /* Semantic */
-  --color-success: #10b981; /* Emerald 500 */
-  --color-success-600: #059669;
-  --color-warning: #f59e0b; /* Amber 500 */
-  --color-warning-600: #d97706;
-  --color-danger: #dc2626; /* Red 600 */
-  --color-danger-600: #b91c1c;
+  /* Semantic Colors - Endava Style */
+  --color-success: #00B67A; /* Endava Green */
+  --color-success-600: #00A36F;
+  --color-warning: #FFB74D; /* Warm Orange */
+  --color-warning-600: #FFA726;
+  --color-danger: #FF3366; /* Using Endava Pink */
+  --color-danger-600: #FF1F55;
 
-  /* Neutrals (Slate) */
-  --neutral-50: #f8fafc;
-  --neutral-100: #f1f5f9;
-  --neutral-200: #e2e8f0;
-  --neutral-300: #cbd5e1;
-  --neutral-400: #94a3b8;
-  --neutral-500: #64748b;
-  --neutral-600: #475569;
-  --neutral-700: #334155;
-  --neutral-800: #1e293b;
-  --neutral-900: #0f172a;
+  /* Neutrals - Endava Style */
+  --neutral-50: #FAFAFA;
+  --neutral-100: #F5F5F5;
+  --neutral-200: #EEEEEE;
+  --neutral-300: #E0E0E0;
+  --neutral-400: #BDBDBD;
+  --neutral-500: #9E9E9E;
+  --neutral-600: #757575;
+  --neutral-700: #616161;
+  --neutral-800: #424242;
+  --neutral-900: #212121;
   --color-border: var(--neutral-200);
   --color-border-strong: var(--neutral-300);
   --color-surface: #ffffff;
-  --color-surface-alt: var(--neutral-100);
+  --color-surface-alt: var(--neutral-50);
   --color-muted: var(--neutral-600);
 
-  /* Shape & spacing tokens */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 14px;
-  --gap-xs: 4px;
-  --gap-sm: 8px;
-  --gap-md: 16px;
-  --gap-lg: 24px;
+  /* Shape & spacing tokens - Endava Style */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --gap-xs: 8px;
+  --gap-sm: 16px;
+  --gap-md: 24px;
+  --gap-lg: 32px;
 
   /* Effects */
   --gradient-accent: linear-gradient(135deg,var(--color-primary) 0%,var(--color-accent) 100%);
