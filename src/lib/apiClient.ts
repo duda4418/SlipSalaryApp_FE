@@ -124,6 +124,9 @@ export function logout() {
 // Generic list helpers
 export const listEmployees = () => baseFetch<Employee[]>('/api/employees');
 export const getEmployee = (id: string) => baseFetch<Employee>(`/api/employees/${id}`);
+// List employees for a specific manager. Backend endpoint provided as GET /api/employees/{manager_id} (returns array).
+// WARNING: This path overlaps with getEmployee; only call when you expect an array result.
+export const listEmployeesForManager = (managerId: string) => baseFetch<Employee[]>(`/api/employees/${managerId}`);
 export const createEmployee = (payload: Partial<Employee>) => baseFetch<Employee>('/api/employees', { method: 'POST', body: JSON.stringify(payload) });
 export const updateEmployee = (id: string, payload: Partial<Employee>) => baseFetch<Employee>(`/api/employees/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 export const deleteEmployee = (id: string) => baseFetch<{ deleted: boolean; id: string }>(`/api/employees/${id}`, { method: 'DELETE' });

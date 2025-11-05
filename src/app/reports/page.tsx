@@ -223,7 +223,8 @@ export default function ReportsPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-[--neutral-800]">Reports</h1>
         <Link href="/dashboard" className="text-sm text-[--color-primary] hover:underline">Back</Link>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Top row: Parameters + Activity Log */}
+      <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm">
           <h2 className="text-lg font-medium text-[--neutral-800]">Parameters</h2>
           <div className="flex gap-4">
@@ -236,23 +237,27 @@ export default function ReportsPage() {
               <Input id="month" type="number" value={month} onChange={e => setMonth(Number(e.target.value))} />
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={loading} onClick={() => managerGuard(() => createAggregatedEmployeeData(managerId, year, month, true), 'Create CSV')}>Create CSV</Button>
-            <Button
-              variant="secondary"
-              disabled={loading || csvOp.status === 'in_progress'}
-              onClick={() => startCsvSend()}
-            >
-              {csvOp.status === 'in_progress' ? 'Sending CSV…' : csvOp.status === 'cached' ? 'Already Sent (CSV)' : 'Send CSV'}
-            </Button>
-            <Button variant="outline" disabled={loading} onClick={() => managerGuard(() => createPdfForEmployees(managerId, year, month, false), 'Create PDFs')}>Create PDFs</Button>
-            <Button
-              variant="destructive"
-              disabled={loading || pdfOp.status === 'in_progress'}
-              onClick={() => startPdfSend()}
-            >
-              {pdfOp.status === 'in_progress' ? 'Sending PDFs…' : pdfOp.status === 'cached' ? 'Already Sent (PDFs)' : 'Send PDFs'}
-            </Button>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              <Button disabled={loading} onClick={() => managerGuard(() => createAggregatedEmployeeData(managerId, year, month, true), 'Create CSV')}>Create CSV</Button>
+              <Button
+                variant="secondary"
+                disabled={loading || csvOp.status === 'in_progress'}
+                onClick={() => startCsvSend()}
+              >
+                {csvOp.status === 'in_progress' ? 'Sending CSV…' : csvOp.status === 'cached' ? 'Already Sent (CSV)' : 'Send CSV'}
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" disabled={loading} onClick={() => managerGuard(() => createPdfForEmployees(managerId, year, month, false), 'Create PDFs')}>Create PDFs</Button>
+              <Button
+                variant="destructive"
+                disabled={loading || pdfOp.status === 'in_progress'}
+                onClick={() => startPdfSend()}
+              >
+                {pdfOp.status === 'in_progress' ? 'Sending PDFs…' : pdfOp.status === 'cached' ? 'Already Sent (PDFs)' : 'Send PDFs'}
+              </Button>
+            </div>
           </div>
           {loading && <Spinner />}
         </div>
@@ -262,8 +267,10 @@ export default function ReportsPage() {
             {log.map((l, i) => <li key={i} className="rounded bg-[--neutral-100] p-2 text-[--neutral-700]">{l}</li>)}
           </ul>
         </div>
-        <div className="space-y-2 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm md:col-span-2 lg:col-span-1">
-          <h2 className="text-lg font-medium text-[--neutral-800] flex items-center justify-between">Generated Files {reports === null && <Spinner />}</h2>
+      </div>
+      {/* Bottom: Generated Files full width */}
+      <div className="space-y-2 rounded-[--radius-md] border border-[--color-border] bg-[--color-surface] p-4 shadow-sm">
+        <h2 className="text-lg font-medium text-[--neutral-800] flex items-center justify-between">Generated Files {reports === null && <Spinner />}</h2>
           {reportsError && <div className="text-xs text-destructive">{reportsError}</div>}
           {reports && reports.length === 0 && <div className="text-xs text-muted-foreground">No report files generated yet.</div>}
           {reports && reports.length > 0 && (
@@ -330,7 +337,6 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
-      </div>
     </div>
     </Protected>
   );

@@ -90,6 +90,17 @@ Accessible on `/reports` if `is_manager` is true (page is protected and requires
 
 ### Report Download
 ### Idempotency
+### My Employees Section
+
+Managers can view a quick summary of their direct reports at the top of the `/employees` page.
+
+Implementation details:
+* API call: `listEmployeesForManager(managerId)` hitting `GET /api/employees/{manager_id}` (returns an array). Because this path overlaps the single employee fetch, it is only invoked when the user is a manager and expecting a list.
+* Fallback: If the dedicated endpoint fails with 404/400, the UI filters the full `listEmployees()` result by `employee.managerId === managerId`.
+* Non-managers: The "My Employees" box is hidden.
+
+If your backend exposes a distinct route (e.g. `/api/managers/{manager_id}/employees`) update the `listEmployeesForManager` path accordingly.
+
 
 The following send endpoints support idempotency via an `Idempotency-Key` header (UUID v4):
 
