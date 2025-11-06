@@ -182,7 +182,7 @@ export const getEmployee = async (id: string) => {
 // List employees for a specific manager. Backend endpoint provided as GET /api/employees/{manager_id} (returns array).
 // WARNING: This path overlaps with getEmployee; only call when you expect an array result.
 export const listEmployeesForManager = async (managerId: string) => {
-  const data = await baseFetch<any[]>(`/api/employees/${managerId}`);
+  const data = await baseFetch<any[]>(`/api/employees/manager/${managerId}`);
   return Array.isArray(data) ? data.map(normalizeEmployee) : [];
 };
 export const createEmployee = async (payload: Partial<Employee>) => {

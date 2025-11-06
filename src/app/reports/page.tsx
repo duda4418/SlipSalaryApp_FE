@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
-import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees, sendAggregatedEmployeeDataLive, sendPdfToEmployeesLive, listReports, downloadReport } from '@/lib/apiClient';
+import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees, sendAggregatedEmployeeDataLive, sendPdfToEmployeesLive, listReports, downloadReport, listEmployees, getEmployee } from '@/lib/apiClient';
 import { makeIdempotencyKey } from '@/lib/utils';
 import { Spinner } from '@/components/shadcn/spinner';
 import Link from 'next/link';
@@ -29,6 +29,9 @@ export default function ReportsPage() {
   const [downloadLoading, setDownloadLoading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
   const [downloadSuccess, setDownloadSuccess] = React.useState<string | null>(null);
+  // Owner (manager) lookup map for reports
+  const [owners, setOwners] = React.useState<Record<string, import('@/types').Employee>>({});
+  const [ownersError, setOwnersError] = React.useState<string | null>(null);
   // Idempotent operation tracking state
   type OpState = { key: string; status: 'idle' | 'in_progress' | 'sent' | 'cached' | 'error' | 'created'; lastMessage?: string };
   const [csvOp, setCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
@@ -38,6 +41,8 @@ export default function ReportsPage() {
   const [createCsvOp, setCreateCsvOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const [createPdfOp, setCreatePdfOp] = React.useState<OpState>({ key: '', status: 'idle' });
   const isManager = !!decoded?.is_manager;
+  // UUID regex used to derive potential owner IDs from report paths when managerId missing
+  const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/;
 
   // Reset idempotent operation state when parameters change (year/month/manager)
   React.useEffect(() => {
@@ -98,12 +103,60 @@ export default function ReportsPage() {
   }
 
   const pushLog = (msg: string) => setLog(l => [msg, ...l]);
+  const debugOwnerDerivation = React.useCallback((reportsList: import('@/types').ReportFile[]) => {
+    const msgs: string[] = [];
+    reportsList.forEach(r => {
+      const rawPath = r.path || '';
+      const mid = r.managerId || (rawPath.match(uuidRegex)?.[0]);
+      msgs.push(`OwnerDerive: report=${r.id} managerIdField=${r.managerId || '∅'} pathUUID=${mid && !r.managerId ? mid : '∅'} finalId=${mid || '∅'}`);
+    });
+    setLog(l => [...msgs, ...l]);
+  }, [uuidRegex]);
 
   const refreshReports = React.useCallback(() => {
     listReports().then(setReports).catch(e => setReportsError(e.detail || 'Failed to list reports'));
   }, []);
 
   React.useEffect(() => { refreshReports(); }, [refreshReports]);
+
+  // Populate owners map once reports are loaded
+  React.useEffect(() => {
+    if (!reports) return;
+    // Derive potential manager IDs: explicit field OR UUID inside path string.
+    const potentialIds = new Set<string>();
+    const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/g;
+    reports.forEach(r => {
+      if (r.managerId) potentialIds.add(r.managerId);
+      if (r.path) {
+        const matches = r.path.match(uuidRegex);
+        if (matches) matches.forEach(m => potentialIds.add(m));
+      }
+    });
+    const ids = Array.from(potentialIds).filter(id => id && !owners[id]);
+    if (ids.length === 0) return;
+    async function loadOwners() {
+      try {
+        if (isManager) {
+          // Bulk fetch to minimize requests
+            const all = await listEmployees();
+            setOwners(prev => ({ ...prev, ...Object.fromEntries(all.map(e => [e.id, e])) }));
+        } else {
+          for (const id of ids) {
+            try {
+              const emp = await getEmployee(id);
+              if (emp) setOwners(prev => ({ ...prev, [id]: emp }));
+            } catch (e: any) {
+              if (!ownersError) setOwnersError('Some owner details could not be loaded');
+            }
+          }
+        }
+      } catch (e: any) {
+        setOwnersError(e.detail || 'Failed to load owners');
+      }
+    }
+    loadOwners();
+    debugOwnerDerivation(reports);
+  }, [reports, isManager, owners, ownersError]);
 
   const wrap = async (fn: () => Promise<any>, label: string) => {
     setLoading(true);
@@ -418,6 +471,7 @@ export default function ReportsPage() {
               <table className="w-full text-xs">
                 <thead className="border-b bg-[--neutral-50]">
                   <tr>
+                    <th className="px-2 py-1 text-left font-medium">Owner</th>
                     <th className="px-2 py-1 text-left font-medium">Type</th>
                     <th className="px-2 py-1 text-left font-medium">Path</th>
                     <th className="px-2 py-1 text-left font-medium">Created</th>
@@ -427,8 +481,19 @@ export default function ReportsPage() {
                 <tbody>
                   {reports.map(r => (
                     <tr key={r.id} className="border-b last:border-0 hover:bg-[--neutral-100]">
+                      <td className="px-2 py-1">
+                        {(() => {
+                          const mid = r.managerId || (r.path.match(uuidRegex)?.[0]);
+                          if (!mid) return '—';
+                          const owner = owners[mid];
+                          if (!owner) return 'Loading…';
+                          const name = [owner.firstName, owner.lastName].filter(Boolean).join(' ').trim();
+                          if (decoded?.sub === mid) return name ? `${name} (You)` : `${owner.email || 'You'}`;
+                          return name || owner.email || mid;
+                        })()}
+                      </td>
                       <td className="px-2 py-1"><Badge variant={r.type === 'pdf' ? 'secondary' : 'outline'}>{r.type.toUpperCase()}</Badge></td>
-                      <td className="px-2 py-1 font-mono truncate max-w-[140px]" title={r.path}>{r.path}</td>
+                      <td className="px-2 py-1 font-mono truncate max-w-[160px]" title={r.path}>{r.path}</td>
                       <td className="px-2 py-1">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}</td>
                       <td className="px-2 py-1">
                         <Dialog>
