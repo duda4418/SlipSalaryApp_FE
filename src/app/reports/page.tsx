@@ -362,10 +362,10 @@ export default function ReportsPage() {
                 <h3 className="text-sm font-semibold tracking-wide text-[--neutral-700] uppercase">Send (Queued)</h3>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                <Button className="w-full" variant="secondary" disabled={loading || csvOp.status === 'in_progress'} onClick={() => startCsvSend()}>
+                <Button className="w-full" disabled={loading || csvOp.status === 'in_progress'} onClick={() => startCsvSend()}>
                   {csvOp.status === 'in_progress' ? 'Sending CSV…' : csvOp.status === 'cached' ? 'Already Sent (CSV)' : 'Send CSV'}
                 </Button>
-                <Button className="w-full" variant="destructive" disabled={loading || pdfOp.status === 'in_progress'} onClick={() => startPdfSend()}>
+                <Button className="w-full" variant="outline" disabled={loading || pdfOp.status === 'in_progress'} onClick={() => startPdfSend()}>
                   {pdfOp.status === 'in_progress' ? 'Sending PDFs…' : pdfOp.status === 'cached' ? 'Already Sent (PDFs)' : 'Send PDFs'}
                 </Button>
               </div>
@@ -379,7 +379,12 @@ export default function ReportsPage() {
                 <Button className="w-full" variant="secondary" disabled={loading || liveCsvOp.status === 'in_progress'} onClick={() => startCsvLiveSend()}>
                   {liveCsvOp.status === 'in_progress' ? 'Sending CSV Live…' : liveCsvOp.status === 'cached' ? 'Already Sent (CSV Live)' : 'Send CSV Live'}
                 </Button>
-                <Button className="w-full" variant="outline" disabled={loading || livePdfOp.status === 'in_progress'} onClick={() => startPdfLiveSend()}>
+                <Button
+                  className="w-full border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white"
+                  variant="outline"
+                  disabled={loading || livePdfOp.status === 'in_progress'}
+                  onClick={() => startPdfLiveSend()}
+                >
                   {livePdfOp.status === 'in_progress' ? 'Sending PDFs Live…' : livePdfOp.status === 'cached' ? 'Already Sent (PDFs Live)' : 'Send PDFs Live'}
                 </Button>
               </div>
