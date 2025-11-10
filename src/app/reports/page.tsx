@@ -6,6 +6,8 @@ import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { createAggregatedEmployeeData, sendAggregatedEmployeeData, createPdfForEmployees, sendPdfToEmployees, sendAggregatedEmployeeDataLive, sendPdfToEmployeesLive, listReports, downloadReport, listEmployees, getEmployee } from '@/lib/apiClient';
+// Toggle verbose owner derivation logging
+const ENABLE_REPORT_OWNER_DEBUG = false;
 import { makeIdempotencyKey } from '@/lib/utils';
 import { Spinner } from '@/components/shadcn/spinner';
 import Link from 'next/link';
@@ -66,6 +68,8 @@ export default function ReportsPage() {
       const statusValue = res.status || 'created';
       setCreateCsvOp({ key, status: statusValue === 'cached' ? 'cached' : 'created', lastMessage: statusValue });
       pushLog(`CSV create ${statusValue} (key=${key})`);
+  // Refresh list so newly created CSV artifacts appear immediately
+  refreshReports();
     } catch (e: any) {
       if (e.status === 409) {
         pushLog(`CSV create in progress; retrying (key=${key})`);
@@ -90,6 +94,8 @@ export default function ReportsPage() {
       const statusValue = res.status || 'created';
       setCreatePdfOp({ key, status: statusValue === 'cached' ? 'cached' : 'created', lastMessage: statusValue });
       pushLog(`PDF create ${statusValue} (key=${key})`);
+  // Refresh list so newly created PDF artifacts appear immediately
+  refreshReports();
     } catch (e: any) {
       if (e.status === 409) {
         pushLog(`PDF create in progress; retrying (key=${key})`);
@@ -103,15 +109,6 @@ export default function ReportsPage() {
   }
 
   const pushLog = (msg: string) => setLog(l => [msg, ...l]);
-  const debugOwnerDerivation = React.useCallback((reportsList: import('@/types').ReportFile[]) => {
-    const msgs: string[] = [];
-    reportsList.forEach(r => {
-      const rawPath = r.path || '';
-      const mid = r.managerId || (rawPath.match(uuidRegex)?.[0]);
-      msgs.push(`OwnerDerive: report=${r.id} managerIdField=${r.managerId || '∅'} pathUUID=${mid && !r.managerId ? mid : '∅'} finalId=${mid || '∅'}`);
-    });
-    setLog(l => [...msgs, ...l]);
-  }, [uuidRegex]);
 
   const refreshReports = React.useCallback(() => {
     listReports().then(setReports).catch(e => setReportsError(e.detail || 'Failed to list reports'));
@@ -155,7 +152,12 @@ export default function ReportsPage() {
       }
     }
     loadOwners();
-    debugOwnerDerivation(reports);
+    if (ENABLE_REPORT_OWNER_DEBUG) {
+      setLog(l => [
+        ...ids.map(id => `OwnerDebug: queued fetch for ${id}`),
+        ...l
+      ]);
+    }
   }, [reports, isManager, owners, ownersError]);
 
   const wrap = async (fn: () => Promise<any>, label: string) => {
@@ -282,6 +284,8 @@ export default function ReportsPage() {
       const statusValue = res.status || (res.sent ? 'sent' : 'sent');
       setCsvOp({ key, status: statusValue === 'cached' ? 'cached' : 'sent', lastMessage: statusValue });
       pushLog(`CSV send ${statusValue} (key=${key})`);
+  // Refresh list so any send-related artifacts/archives appear
+  refreshReports();
     } catch (e: any) {
       if (e.status === 409) {
         pushLog(`CSV send in progress; retrying (key=${key})`);
@@ -306,6 +310,7 @@ export default function ReportsPage() {
       const statusValue = res.status || 'sent';
       setPdfOp({ key, status: statusValue === 'cached' ? 'cached' : 'sent', lastMessage: statusValue });
       pushLog(`PDF send ${statusValue} (key=${key})`);
+  refreshReports();
     } catch (e: any) {
       if (e.status === 409) {
         pushLog(`PDF send in progress; retrying (key=${key})`);
@@ -330,6 +335,7 @@ export default function ReportsPage() {
       const statusValue = res.status || (res.sent ? 'sent' : 'sent');
       setLiveCsvOp({ key, status: statusValue === 'cached' ? 'cached' : 'sent', lastMessage: statusValue });
       pushLog(`CSV Live send ${statusValue} (key=${key})`);
+  refreshReports();
     } catch (e: any) {
       if (e.status === 409) {
         pushLog(`CSV Live send in progress; retrying (key=${key})`);
@@ -354,6 +360,7 @@ export default function ReportsPage() {
       const statusValue = res.status || 'sent';
       setLivePdfOp({ key, status: statusValue === 'cached' ? 'cached' : 'sent', lastMessage: statusValue });
       pushLog(`PDF Live send ${statusValue} (key=${key})`);
+  refreshReports();
     } catch (e: any) {
       if (e.status === 409) {
         pushLog(`PDF Live send in progress; retrying (key=${key})`);
